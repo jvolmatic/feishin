@@ -3,7 +3,8 @@ import type {
     ItemListStateItemWithRequiredProperties,
 } from '/@/renderer/components/item-list/helpers/item-list-state';
 
-import { useSuspenseQuery } from '@tanstack/react-query';
+import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
+import isElectron from 'is-electron';
 import { ReactNode, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { generatePath, useParams } from 'react-router';
@@ -32,6 +33,9 @@ import {
 } from '/@/renderer/features/shared/components/list-sort-by-dropdown';
 import { ListSortOrderToggleButtonControlled } from '/@/renderer/features/shared/components/list-sort-order-toggle-button';
 import { FILTER_KEYS, searchLibraryItems } from '/@/renderer/features/shared/utils';
+import { AddGenreModal } from '/@/renderer/features/tag-editor/components/add-genre-modal';
+import { useAlbumGenreEdit } from '/@/renderer/features/tag-editor/hooks/use-album-genre-edit';
+import { useMetadataEditStore } from '/@/renderer/features/tag-editor/store/metadata-edit.store';
 import { useHotkeys } from '/@/renderer/hooks/use-hotkeys';
 import { AppRoute } from '/@/renderer/router/routes';
 import { useCurrentServer, usePlayerSong } from '/@/renderer/store';
@@ -45,11 +49,14 @@ import { ActionIcon } from '/@/shared/components/action-icon/action-icon';
 import { Checkbox } from '/@/shared/components/checkbox/checkbox';
 import { Group } from '/@/shared/components/group/group';
 import { Icon } from '/@/shared/components/icon/icon';
+import { openModal } from '/@/shared/components/modal/modal';
 import { Pill, PillLink } from '/@/shared/components/pill/pill';
+import { Spinner } from '/@/shared/components/spinner/spinner';
 import { Spoiler } from '/@/shared/components/spoiler/spoiler';
 import { Stack } from '/@/shared/components/stack/stack';
 import { TextInput } from '/@/shared/components/text-input/text-input';
 import { Text } from '/@/shared/components/text/text';
+import { Tooltip } from '/@/shared/components/tooltip/tooltip';
 import { useDebouncedValue } from '/@/shared/hooks/use-debounced-value';
 import {
     Album,
@@ -268,13 +275,36 @@ const AlbumMetadataTags = ({ album }: AlbumMetadataTagsProps) => {
 };
 
 interface AlbumMetadataGenresProps {
-    genres?: Array<{ id: string; name: string }>;
+    album?: Album;
 }
 
-const AlbumMetadataGenres = ({ genres }: AlbumMetadataGenresProps) => {
+const AlbumMetadataGenres = ({ album }: AlbumMetadataGenresProps) => {
     const { t } = useTranslation();
+    const { addGenre, pendingAdded, pendingRemoved, removeGenre } = useAlbumGenreEdit(album);
+    const isBusy = useMetadataEditStore((state) => state.pending !== null);
 
-    if (!genres || genres.length === 0) return null;
+    // Editing needs the download settings (local folder or SSH) to locate the files.
+    const canEdit = useQuery({
+        enabled: isElectron(),
+        queryFn: async () => {
+            const saved = (await window.api.localSettings.get('download')) as null | {
+                localPath?: string;
+                mode?: string;
+                ssh?: { remotePath?: string };
+            };
+            return Boolean(saved?.mode === 'remote' ? saved.ssh?.remotePath : saved?.localPath);
+        },
+        queryKey: ['metadata-edit', 'can-edit'],
+    }).data;
+
+    const genres = album?.genres ?? [];
+    if (genres.length === 0 && !canEdit) return null;
+
+    const openAddModal = () =>
+        openModal({
+            children: <AddGenreModal existing={genres.map((g) => g.name)} onSubmit={addGenre} />,
+            title: t('metadataEdit.addGenre'),
+        });
 
     return (
         <Stack gap="xs">
@@ -284,17 +314,75 @@ const AlbumMetadataGenres = ({ genres }: AlbumMetadataGenresProps) => {
                 })}
             </Text>
             <Pill.Group>
-                {genres.map((genre) => (
-                    <PillLink
-                        key={`genre-${genre.id}`}
-                        size="md"
-                        to={generatePath(AppRoute.LIBRARY_GENRES_DETAIL, {
-                            genreId: genre.id,
-                        })}
-                    >
-                        {genre.name}
-                    </PillLink>
-                ))}
+                {genres.map((genre) => {
+                    const isRemoving = pendingRemoved.includes(genre.name);
+                    return (
+                        <PillLink
+                            className={isRemoving ? styles['genre-pending'] : undefined}
+                            key={`genre-${genre.id}`}
+                            size="md"
+                            to={generatePath(AppRoute.LIBRARY_GENRES_DETAIL, {
+                                genreId: genre.id,
+                            })}
+                        >
+                            <Group
+                                align="center"
+                                className={styles['genre-pill-content']}
+                                gap="xs"
+                                wrap="nowrap"
+                            >
+                                {genre.name}
+                                {canEdit &&
+                                    (isRemoving ? (
+                                        <Tooltip label={t('metadataEdit.applying')}>
+                                            <span>
+                                                <Spinner size="sm" />
+                                            </span>
+                                        </Tooltip>
+                                    ) : (
+                                        <ActionIcon
+                                            disabled={isBusy}
+                                            icon="delete"
+                                            iconProps={{ size: 'sm' }}
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                removeGenre(genre.name);
+                                            }}
+                                            size="compact-xs"
+                                            stopsPropagation
+                                            tooltip={{ label: t('metadataEdit.removeGenre') }}
+                                            variant="subtle"
+                                        />
+                                    ))}
+                            </Group>
+                        </PillLink>
+                    );
+                })}
+                {pendingAdded
+                    .filter(
+                        (name) => !genres.some((g) => g.name.toLowerCase() === name.toLowerCase()),
+                    )
+                    .map((name) => (
+                        <Tooltip key={`genre-pending-${name}`} label={t('metadataEdit.applying')}>
+                            <Pill className={styles['genre-pending']} size="md">
+                                <Group gap="xs" wrap="nowrap">
+                                    {name}
+                                    <Spinner size="sm" />
+                                </Group>
+                            </Pill>
+                        </Tooltip>
+                    ))}
+                {canEdit && (
+                    <ActionIcon
+                        disabled={isBusy}
+                        icon="add"
+                        iconProps={{ size: 'sm' }}
+                        onClick={openAddModal}
+                        size="xs"
+                        tooltip={{ label: t('metadataEdit.addGenre') }}
+                        variant="subtle"
+                    />
+                )}
             </Pill.Group>
         </Stack>
     );
@@ -527,7 +615,7 @@ export const AlbumDetailContent = () => {
                         )}
                     </div>
                     <div className={styles.metadataColumn}>
-                        <AlbumMetadataGenres genres={detailQuery?.data?.genres} />
+                        <AlbumMetadataGenres album={detailQuery?.data} />
                         <AlbumMetadataTags album={detailQuery?.data} />
                         <AlbumMetadataExternalLinks
                             albumArtist={detailQuery?.data?.albumArtistName}

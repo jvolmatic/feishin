@@ -35,6 +35,7 @@ export const SidebarDownloadList = () => {
             <Accordion.Panel>
                 {downloads.map(([id, { albumName, artistId, artistName, progress }]) => {
                     const isFailed = progress.stage === 'error';
+                    const isWarning = progress.stage === 'done';
 
                     return (
                         <div className={styles.row} key={id}>
@@ -42,18 +43,26 @@ export const SidebarDownloadList = () => {
                                 <Text isNoSelect size="sm" truncate>
                                     {albumName}
                                 </Text>
-                                {isFailed && (
+                                {(isFailed || isWarning) && (
                                     <>
                                         <Tooltip
                                             label={
-                                                progress.error ??
-                                                t('download.error', { album: albumName })
+                                                isWarning
+                                                    ? t('download.skipped', {
+                                                          count: progress.skipped,
+                                                      })
+                                                    : (progress.error ??
+                                                      t('download.error', { album: albumName }))
                                             }
                                             multiline
                                             withinPortal
                                         >
                                             <span className={styles.errorIcon}>
-                                                <Icon color="error" icon="error" />
+                                                {isWarning ? (
+                                                    <Icon color="warn" icon="warn" />
+                                                ) : (
+                                                    <Icon color="error" icon="error" />
+                                                )}
                                             </span>
                                         </Tooltip>
                                         <ActionIcon
@@ -83,12 +92,14 @@ export const SidebarDownloadList = () => {
                                 {artistName ? ' - ' : ''}
                                 {isFailed
                                     ? t('download.failed')
-                                    : t(`download.stage_${progress.stage}`)}
-                                {!isFailed && progress.total
+                                    : isWarning
+                                      ? t('download.skipped', { count: progress.skipped })
+                                      : t(`download.stage_${progress.stage}`)}
+                                {!isFailed && !isWarning && progress.total
                                     ? ` (${progress.done ?? 0}/${progress.total})`
                                     : ''}
                             </Text>
-                            {!isFailed && (
+                            {!isFailed && !isWarning && (
                                 <Progress
                                     animated={!progress.total}
                                     size="xs"

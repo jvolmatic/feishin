@@ -568,6 +568,7 @@
             "deletePlaylist": "$t(action.deletePlaylist)",
             "deselectAll": "$t(action.deselectAll)",
             "download": "Download",
+            "redownloadExternal": "Redownload from external",
             "moveItems": "$t(action.moveItems)",
             "moveToNext": "$t(action.moveToNext)",
             "moveToBottom": "$t(action.moveToBottom)",
@@ -1496,6 +1497,14 @@
             "individualControl": "Release Shift to modify all speaker volumes"
         }
     },
+    "metadataEdit": {
+        "addGenre": "Add genre",
+        "applying": "Applying change, this can take a while",
+        "busy": "The last metadata changes are still being processed",
+        "failed": "Failed to update metadata",
+        "genrePlaceholder": "Pick an existing genre or type a new one",
+        "removeGenre": "Remove genre from all songs"
+    },
     "download": {
         "action": "Download album",
         "cookiesBrowser": "Cookies from browser",
@@ -1505,6 +1514,7 @@
         "done": "Downloaded \"{{album}}\"",
         "error": "Failed to download \"{{album}}\"",
         "failed": "Failed",
+        "skipped": "{{count}} unavailable track(s) skipped",
         "ffmpegPath": "ffmpeg path",
         "ffmpegPath_description": "Leave empty to use ffmpeg from PATH",
         "fetchLyrics": "Fetch lyrics",
@@ -1532,7 +1542,7 @@
         "testConnection": "Test connection",
         "testFailed": "Connection failed",
         "testOk": "Connection successful",
-        "title": "Album downloads",
+        "title": "Downloads and metadata",
         "ytdlpPath": "yt-dlp path",
         "ytdlpPath_description": "Leave empty to use yt-dlp from PATH"
     },

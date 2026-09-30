@@ -1175,7 +1175,9 @@ export type ShareItemBody = {
 // Sharing
 export type ShareItemResponse = undefined | { id: string };
 
-export type StartLibraryScanArgs = BaseEndpointArgs;
+export type StartLibraryScanArgs = BaseEndpointArgs & {
+    query?: { fullScan?: boolean; target?: string };
+};
 
 export type StartLibraryScanResponse = null;
 

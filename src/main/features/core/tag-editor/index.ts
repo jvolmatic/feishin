@@ -1,5 +1,7 @@
 import type {
     ArtworkOp,
+    ModifyAlbumGenresRequest,
+    ModifyAlbumGenresResponse,
     ReadSongMetadataBatchResult,
     TagValue,
     WriteSongTagsBatchResult,
@@ -7,6 +9,7 @@ import type {
 
 import { ipcMain, type IpcMainInvokeEvent } from 'electron';
 
+import { modifyAlbumGenres } from './album-genres';
 import { readFilesMetadataBatch, readLocalImageFile, writeFilesTags } from './taglib-service';
 
 const sendBatchProgress = (event: IpcMainInvokeEvent, processed: number, total: number) => {
@@ -102,6 +105,26 @@ ipcMain.handle(
             return { success: true };
         } catch (err) {
             return { error: String(err), success: false };
+        }
+    },
+);
+
+ipcMain.handle(
+    'modify-album-genres',
+    async (_event, request: ModifyAlbumGenresRequest): Promise<ModifyAlbumGenresResponse> => {
+        try {
+            const { failed, folder, updated } = await modifyAlbumGenres(request);
+            if (failed.length > 0) {
+                return {
+                    error: `${failed[0].file}: ${failed[0].error}`,
+                    folder,
+                    success: false,
+                    updated,
+                };
+            }
+            return { folder, success: true, updated };
+        } catch (err) {
+            return { error: err instanceof Error ? err.message : String(err), success: false };
         }
     },
 );

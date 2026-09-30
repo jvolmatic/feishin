@@ -18,6 +18,25 @@ export interface FileArtworkData {
     mimeType: string;
 }
 
+export interface ModifyAlbumGenresRequest {
+    add: string[];
+    album: string;
+    albumArtist: string;
+    remove: string[];
+}
+
+export interface ModifyAlbumGenresResponse extends IpcResult {
+    /** Album folder relative to the library root, e.g. `Artist/Album`. */
+    folder?: string;
+    updated?: number;
+}
+
+export interface ModifyAlbumGenresResult {
+    failed: Array<{ error: string; file: string }>;
+    folder: string;
+    updated: number;
+}
+
 export interface ReadLocalImageResult extends IpcResult {
     data?: string;
     mimeType?: string;
@@ -39,6 +58,7 @@ export interface ReadSongMetadataBatchResult extends IpcResult {
 /** Subset of `window.api.utils` consumed by the metadata editor. */
 export interface TagEditorUtils {
     cancelReadSongMetadata: () => void;
+    modifyAlbumGenres: (request: ModifyAlbumGenresRequest) => Promise<ModifyAlbumGenresResponse>;
     offBatchProgress: (cb: (event: unknown, data: BatchProgress) => void) => void;
     onBatchProgress: (cb: (event: unknown, data: BatchProgress) => void) => void;
     readLocalImage: (filePath: string) => Promise<ReadLocalImageResult>;

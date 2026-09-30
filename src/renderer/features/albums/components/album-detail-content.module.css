@@ -123,3 +123,12 @@
         max-height: calc(100vh - 90px - var(--theme-spacing-lg) - 4rem);
     }
 }
+
+.genre-pending {
+    opacity: 0.6;
+}
+
+.genre-pill-content {
+    height: 100%;
+    line-height: 1;
+}

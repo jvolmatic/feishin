@@ -8,6 +8,7 @@ import { Client, SFTPWrapper } from 'ssh2';
 import YTMusic from 'ytmusic-api';
 
 import { store } from '../settings';
+import { editGenres } from '../tag-editor/taglib-service';
 
 import { getMainWindow } from '/@/main/index';
 import log from '/@/main/logger';
@@ -53,7 +54,7 @@ const DEFAULT_CONFIG: DownloadConfig = {
     ytdlpPath: '',
 };
 
-const getConfig = (): DownloadConfig => {
+export const getConfig = (): DownloadConfig => {
     const saved = (store.get('download') ?? {}) as Partial<DownloadConfig>;
     return { ...DEFAULT_CONFIG, ...saved, ssh: { ...DEFAULT_CONFIG.ssh, ...saved.ssh } };
 };
@@ -116,7 +117,12 @@ const run = (
             if (code !== 0) {
                 log.warn(`${cmd} exited with code ${code}`, stderr.slice(-2000));
                 reject(
-                    new Error(`${path.basename(cmd)} failed: ${stderr.trim().split('\n').pop()}`),
+                    Object.assign(
+                        new Error(
+                            `${path.basename(cmd)} failed: ${stderr.trim().split('\n').pop()}`,
+                        ),
+                        { stderr },
+                    ),
                 );
             } else {
                 resolve({ code, stdout });
@@ -244,10 +250,17 @@ const writeArtistTags = async (
 ) => {
     try {
         const current = await ffprobeTag(ffprobe, file, 'artist');
+        // Dots are optional so a source tag like "J Cole" is still recognized as "J. Cole".
+        const albumArtistRe = new RegExp(
+            albumArtist
+                .split('.')
+                .map((part) => part.replace(/[\\^$*+?()|[\]{}]/g, '\\$&'))
+                .join('\\.?'),
+            'gi',
+        );
         const artist = current
             ? current
-                  .split(albumArtist)
-                  .join('\u0000')
+                  .replace(albumArtistRe, '\u0000')
                   .replace(/\s*,\s*/g, '; ')
                   .split('\u0000')
                   .join(albumArtist)
@@ -337,7 +350,7 @@ const literal = (value: string) => value.replace(/%/g, '%%').replace(/:/g, '\\:'
 
 // --- SFTP ---
 
-const connectSsh = (config: DownloadConfig['ssh']): Promise<Client> =>
+export const connectSsh = (config: DownloadConfig['ssh']): Promise<Client> =>
     new Promise((resolve, reject) => {
         const client = new Client();
         Promise.resolve(config.authType === 'key' ? fs.readFile(config.keyPath) : undefined)
@@ -357,7 +370,7 @@ const connectSsh = (config: DownloadConfig['ssh']): Promise<Client> =>
             .catch(reject);
     });
 
-const getSftp = (client: Client): Promise<SFTPWrapper> =>
+export const getSftp = (client: Client): Promise<SFTPWrapper> =>
     new Promise((resolve, reject) =>
         client.sftp((error, sftp) => (error ? reject(error) : resolve(sftp))),
     );
@@ -384,17 +397,15 @@ const uploadRemote = async (
     config: DownloadConfig['ssh'],
     files: string[],
     remoteDir: string,
-    onFile: (done: number) => void,
+    onFile: (file: string) => void,
 ) => {
     const client = await connectSsh(config);
     try {
         const sftp = await getSftp(client);
         await sftpMkdirp(sftp, remoteDir);
-        let done = 0;
         for (const file of files) {
             await sftpPut(sftp, file, `${remoteDir}/${path.basename(file)}`);
-            done += 1;
-            onFile(done);
+            onFile(file);
         }
     } finally {
         client.end();
@@ -420,6 +431,7 @@ const downloadAlbum = async (request: DownloadAlbumRequest) => {
     const controller = new AbortController();
     active.set(id, controller);
     let tmp = '';
+    let skipped = 0;
 
     try {
         if (config.mode === 'local' && !config.localPath) {
@@ -455,39 +467,51 @@ const downloadAlbum = async (request: DownloadAlbumRequest) => {
         ];
 
         send({ id, stage: 'downloading' });
-        await run(
-            ytdlp,
-            [
-                '-x',
-                '-f',
-                'ba[ext=m4a]',
-                ...cookieArgs,
-                '--embed-metadata',
-                '--embed-thumbnail',
-                '--parse-metadata',
-                '%(artist,uploader,channel|)s:%(artist)s',
-                ...parse(request.artist, 'album_artist'),
-                ...parse(request.album, 'album'),
-                '--parse-metadata',
-                '%(track_number,playlist_index|)s:%(track_number)s',
-                ...(request.year ? parse(String(request.year), 'meta_date') : []),
-                '-o',
-                path.join(tmp, '%(playlist_index)03d-%(id)s.%(ext)s'),
-                url,
-            ],
-            (line) => {
-                const match = line.match(/Downloading item (\d+) of (\d+)/);
-                if (match) {
-                    send({
-                        done: Number(match[1]) - 1,
-                        id,
-                        stage: 'downloading',
-                        total: Number(match[2]),
-                    });
-                }
-            },
-            controller.signal,
-        );
+        try {
+            await run(
+                ytdlp,
+                [
+                    '-x',
+                    '-f',
+                    'ba[ext=m4a]',
+                    ...cookieArgs,
+                    '--embed-metadata',
+                    '--embed-thumbnail',
+                    '--parse-metadata',
+                    '%(artist,uploader,channel|)s:%(artist)s',
+                    ...parse(request.artist, 'album_artist'),
+                    ...parse(request.album, 'album'),
+                    '--parse-metadata',
+                    '%(track_number,playlist_index|)s:%(track_number)s',
+                    ...(request.year ? parse(String(request.year), 'meta_date') : []),
+                    '-o',
+                    path.join(tmp, '%(playlist_index)03d-%(id)s.%(ext)s'),
+                    url,
+                ],
+                (line) => {
+                    const match = line.match(/Downloading item (\d+) of (\d+)/);
+                    if (match) {
+                        send({
+                            done: Number(match[1]) - 1,
+                            id,
+                            stage: 'downloading',
+                            total: Number(match[2]),
+                        });
+                    }
+                },
+                controller.signal,
+            );
+        } catch (error) {
+            // Unavailable videos are skipped; any other yt-dlp error still fails the album.
+            const errors = String((error as { stderr?: string }).stderr ?? '')
+                .split('\n')
+                .filter((line) => line.startsWith('ERROR:'));
+            if (!errors.length || !errors.every((line) => line.includes('Video unavailable'))) {
+                throw error;
+            }
+            skipped = errors.length;
+            log.warn('Skipped unavailable videos', errors);
+        }
 
         send({ id, stage: 'processing' });
         const artistDir = sanitizeSegment(request.artist);
@@ -507,6 +531,12 @@ const downloadAlbum = async (request: DownloadAlbumRequest) => {
 
             await squareCover(ffmpeg, ffprobe, file, tmp);
             await writeArtistTags(ffmpeg, ffprobe, file, tmp, request.artist);
+            // Replace whatever genre the source carried (e.g. "Music") with only the user's tags.
+            try {
+                await editGenres(file, request.genres ?? [], [], true);
+            } catch (error) {
+                log.warn('Failed to write genre tags', error);
+            }
 
             let base = sanitizeSegment(title || path.basename(name, '.m4a'));
             if (usedNames.has(base.toLowerCase())) base = `${base} (${outputs.length + 1})`;
@@ -560,14 +590,18 @@ const downloadAlbum = async (request: DownloadAlbumRequest) => {
             }
         } else {
             const remoteDir = `${config.ssh.remotePath.replace(/\/+$/, '')}/${artistDir}/${albumDir}`;
-            send({ done: 0, id, stage: 'uploading', total: outputs.length });
-            await uploadRemote(config.ssh, outputs, remoteDir, (done) =>
-                send({ done, id, stage: 'uploading', total: outputs.length }),
-            );
+            // Progress counts only the songs, not the lyrics files uploaded alongside them.
+            const total = outputs.filter((f) => f.endsWith('.m4a')).length;
+            let done = 0;
+            send({ done, id, stage: 'uploading', total });
+            await uploadRemote(config.ssh, outputs, remoteDir, (file) => {
+                if (file.endsWith('.m4a')) done += 1;
+                send({ done, id, stage: 'uploading', total });
+            });
         }
 
         await fs.rm(tmp, { force: true, recursive: true });
-        send({ id, stage: 'done' });
+        send({ folder: `${artistDir}/${albumDir}`, id, skipped, stage: 'done' });
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         log.error('Album download failed', error);

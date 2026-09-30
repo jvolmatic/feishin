@@ -7,7 +7,7 @@ import { getImageMimeTypeFromPath } from '/@/shared/utils/image-mime';
 
 let _taglib: null | TagLib = null;
 
-const getTagLib = async (): Promise<TagLib> => {
+export const getTagLib = async (): Promise<TagLib> => {
     if (!_taglib) _taglib = await TagLib.initialize();
     return _taglib;
 };
@@ -18,7 +18,7 @@ const BATCH_CONCURRENCY = 8;
  * Known PROPERTIES stay camelCase for the taglib-wasm JS API. Custom tags use
  * TagLib's ALL_CAPS wire form so read/write/settings keys stay consistent.
  */
-const canonicalizePropertyKey = (key: string): string => {
+export const canonicalizePropertyKey = (key: string): string => {
     if (key in PROPERTIES) return key;
     return key.toUpperCase();
 };
@@ -88,7 +88,7 @@ const tagValuesEqual = (a: TagValue, b: TagValue | undefined): boolean => {
 };
 
 /** Runs `fn` over `items` with at most `concurrency` tasks in flight at once. Stops early if `signal` is aborted. */
-const mapWithConcurrency = async <T>(
+export const mapWithConcurrency = async <T>(
     items: T[],
     concurrency: number,
     fn: (item: T) => Promise<void>,
@@ -323,3 +323,30 @@ export async function writeFilesTags(
 
     return { failedFiles, success: failedFiles.length === 0 };
 }
+
+/** Applies the genre changes to one local file, preserving genres it already has. */
+export const editGenres = async (
+    file: string,
+    add: string[],
+    remove: string[],
+    replace = false,
+) => {
+    const taglib = await getTagLib();
+    const removeSet = new Set(remove.map((g) => g.toLowerCase()));
+
+    await taglib.edit(file, (f) => {
+        const tag = f.tag();
+        // Genres may be stored as one comma-separated string or as several values; normalize both.
+        const current = (replace ? [] : [tag.genre ?? '', ...(f.properties().genre ?? [])])
+            .flatMap((g) => g.split(','))
+            .map((g) => g.trim())
+            .filter((g) => g !== '')
+            .filter((g, i, all) => all.findIndex((o) => o.toLowerCase() === g.toLowerCase()) === i);
+        const next = current.filter((g) => !removeSet.has(g.toLowerCase()));
+        for (const genre of add) {
+            if (!next.some((g) => g.toLowerCase() === genre.toLowerCase())) next.push(genre);
+        }
+        // Written as a single comma-separated value so every tag format keeps all genres.
+        tag.setGenre(next.join(', '));
+    });
+};

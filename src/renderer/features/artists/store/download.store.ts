@@ -7,6 +7,7 @@ import { queryClient } from '/@/renderer/lib/react-query';
 import { useAuthStore } from '/@/renderer/store/auth.store';
 import { logger } from '/@/renderer/utils/logger';
 import { toast } from '/@/shared/components/toast/toast';
+import { SongListSort, SortOrder } from '/@/shared/types/domain-types';
 import { DownloadAlbumRequest, DownloadProgress } from '/@/shared/types/download';
 
 interface DownloadEntry {
@@ -59,33 +60,71 @@ const SCAN_MAX_POLLS = 30;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * After a download finishes: keep the entry in a "scanning" state (so the album card shows a
- * loader), ask the server to scan, wait at least 5 seconds, wait for the scan to end, then
- * refetch library queries. That moves the album from "available albums" into "albums".
+ * Asks the server to scan, waits at least 5 seconds, waits for the scan to end, then refetches
+ * library queries. Starting a scan needs admin rights; for other users the API layer would show
+ * a "not authorized" error toast, so it is skipped and we rely on the server noticing changes.
  */
-const refreshLibraryAfterDownload = async (id: string, entry: DownloadEntry | undefined) => {
+export const scanLibraryAndRefresh = async ({
+    artistId,
+    folder,
+    fullScan = false,
+    libraryId,
+}: {
+    artistId?: string;
+    folder?: string;
+    fullScan?: boolean;
+    libraryId?: null | number;
+} = {}) => {
     const server = useAuthStore.getState().currentServer;
     const serverId = server?.id;
-    if (!serverId) {
-        setEntry(id, null);
-        return;
-    }
-    // Starting a scan needs admin rights; for other users the API layer would show an
-    // "not authorized" error toast, so skip it and rely on the server noticing new files.
+    if (!serverId) return;
     const canScan = Boolean(server.isAdmin);
 
-    setEntry(id, {
-        albumName: entry?.albumName ?? '',
-        artistId: entry?.artistId,
-        artistName: entry?.artistName ?? '',
-        progress: { id, stage: 'scanning' },
-    });
+    // Navidrome scans a single folder with `target` = "<libraryId>:<folder>". The library id is
+    // the song's, or the server's only library; if it is ambiguous, scan everything instead.
+    let target: string | undefined;
+    if (canScan && folder) {
+        let id = libraryId ?? undefined;
+        // A song by the same album artist tells us which library the artist lives in.
+        if (id === undefined && artistId) {
+            try {
+                const songs = await api.controller.getSongList({
+                    apiClientProps: { serverId },
+                    query: {
+                        albumArtistIds: [artistId],
+                        limit: 1,
+                        sortBy: SongListSort.NAME,
+                        sortOrder: SortOrder.ASC,
+                        startIndex: 0,
+                    },
+                });
+                id = songs?.items[0]?.libraryId ?? undefined;
+            } catch (error) {
+                logger.warn('Failed to look up the artist library', { error });
+            }
+        }
+        if (id === undefined) {
+            try {
+                const folders = await api.controller.getMusicFolderList({
+                    apiClientProps: { serverId },
+                    query: null,
+                });
+                if (folders?.items.length === 1) id = Number(folders.items[0].id);
+            } catch (error) {
+                logger.warn('Failed to list libraries for targeted scan', { error });
+            }
+        }
+        if (id !== undefined && !Number.isNaN(id)) target = `${id}:${folder}`;
+    }
 
     if (canScan) {
         try {
-            await api.controller.startLibraryScan({ apiClientProps: { serverId } });
+            await api.controller.startLibraryScan({
+                apiClientProps: { serverId },
+                query: { fullScan, target },
+            });
         } catch (error) {
-            logger.warn('Failed to start library scan after download', { error });
+            logger.warn('Failed to start library scan', { error });
         }
     }
 
@@ -102,7 +141,43 @@ const refreshLibraryAfterDownload = async (id: string, entry: DownloadEntry | un
     }
 
     await invalidateLibraryQueriesAfterScan(queryClient, serverId);
-    setEntry(id, null);
+};
+
+/**
+ * After a download finishes: keep the entry in a "scanning" state (so the album card shows a
+ * loader), then scan. That moves the album from "available albums" into "albums".
+ */
+const refreshLibraryAfterDownload = async (
+    id: string,
+    entry: DownloadEntry | undefined,
+    folder?: string,
+    skipped = 0,
+) => {
+    if (!useAuthStore.getState().currentServer?.id) {
+        setEntry(id, skipped > 0 ? { ...entry!, progress: { id, skipped, stage: 'done' } } : null);
+        return;
+    }
+
+    setEntry(id, {
+        albumName: entry?.albumName ?? '',
+        artistId: entry?.artistId,
+        artistName: entry?.artistName ?? '',
+        progress: { id, stage: 'scanning' },
+    });
+
+    await scanLibraryAndRefresh({ artistId: entry?.artistId, folder });
+    // Kept so the sidebar can show the warning until dismissed.
+    setEntry(
+        id,
+        skipped > 0
+            ? {
+                  albumName: entry?.albumName ?? '',
+                  artistId: entry?.artistId,
+                  artistName: entry?.artistName ?? '',
+                  progress: { id, skipped, stage: 'done' },
+              }
+            : null,
+    );
 };
 
 export const dismissDownload = (id: string) => setEntry(id, null);
@@ -129,7 +204,7 @@ export const initDownloadListener = () =>
         const album = entry?.albumName ?? '';
 
         if (progress.stage === 'done') {
-            void refreshLibraryAfterDownload(progress.id, entry);
+            void refreshLibraryAfterDownload(progress.id, entry, progress.folder, progress.skipped);
             toast.success({ message: i18n.t('download.done', { album }) as string });
         } else if (progress.stage === 'error') {
             // Kept so the sidebar can show failed downloads until dismissed.

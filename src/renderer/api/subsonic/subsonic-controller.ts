@@ -2453,9 +2453,11 @@ export const SubsonicController: InternalControllerEndpoint = {
         return null;
     },
     startLibraryScan: async (args) => {
-        const { apiClientProps } = args;
+        const { apiClientProps, query } = args;
 
-        const res = await ssApiClient(apiClientProps).startScan({ query: {} });
+        const res = await ssApiClient(apiClientProps).startScan({
+            query: { fullScan: query?.fullScan, target: query?.target },
+        });
 
         if (res.status !== 200) {
             throw new Error('Failed to start library scan');

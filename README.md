@@ -35,7 +35,9 @@ Rewrite of [Sonixd](https://github.com/jeffvli/sonixd).
 
 - [x] View all available artists and their albums
 - [ ] Download albums with yt-dlp directly from the app 
-- [ ] Edit metatags  
+- [ ] Edit metatags on external servers
+- [ ] Show world wide play count on albums & tracks
+- [ ] Search for artists not in library
 - [x] Playlist manager
 
 ## Getting Started

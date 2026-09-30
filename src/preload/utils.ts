@@ -3,6 +3,8 @@ import { ipcRenderer, type IpcRendererEvent, webFrame } from 'electron';
 import type {
     ArtworkOp,
     BatchProgress,
+    ModifyAlbumGenresRequest,
+    ModifyAlbumGenresResponse,
     ReadLocalImageResult,
     ReadSongMetadataBatchResult,
     TagValue,
@@ -30,6 +32,12 @@ const writeSongTagsBatch = (
     artworkOp?: ArtworkOp,
 ): Promise<WriteSongTagsBatchResult> => {
     return ipcRenderer.invoke('write-song-tags-batch', filePaths, edits, removed, artworkOp);
+};
+
+const modifyAlbumGenres = (
+    request: ModifyAlbumGenresRequest,
+): Promise<ModifyAlbumGenresResponse> => {
+    return ipcRenderer.invoke('modify-album-genres', request);
 };
 
 const onBatchProgress = (cb: (event: IpcRendererEvent, data: BatchProgress) => void) => {
@@ -183,6 +191,7 @@ export const utils = {
     isMacOS,
     isWindows,
     mainMessageListener,
+    modifyAlbumGenres,
     offBatchProgress,
     onBatchProgress,
     openApplicationDirectory,

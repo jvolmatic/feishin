@@ -363,7 +363,10 @@ const scanStatusBody = z.object({
     scanning: z.boolean(),
 });
 
-const startScanParameters = z.object({});
+const startScanParameters = z.object({
+    fullScan: z.boolean().optional(),
+    target: z.string().optional(),
+});
 const startScan = z.object({ scanStatus: scanStatusBody });
 
 const getScanStatusParameters = z.object({});

@@ -49,6 +49,7 @@ import {
 import { usePlayButtonClick } from '/@/renderer/features/shared/hooks/use-play-button-click';
 import { searchLibraryItems } from '/@/renderer/features/shared/utils';
 import { songsQueries } from '/@/renderer/features/songs/api/songs-api';
+import { DownloadTagsModal } from '/@/renderer/features/tag-editor/components/download-tags-modal';
 import { useContainerQuery } from '/@/renderer/hooks';
 import { useGenreRoute } from '/@/renderer/hooks/use-genre-route';
 import { useHotkeys } from '/@/renderer/hooks/use-hotkeys';
@@ -79,6 +80,7 @@ import { DropdownMenu } from '/@/shared/components/dropdown-menu/dropdown-menu';
 import { Grid } from '/@/shared/components/grid/grid';
 import { Group } from '/@/shared/components/group/group';
 import { Icon } from '/@/shared/components/icon/icon';
+import { openModal } from '/@/shared/components/modal/modal';
 import { Progress } from '/@/shared/components/progress/progress';
 import { SegmentedControl } from '/@/shared/components/segmented-control/segmented-control';
 import { Skeleton } from '/@/shared/components/skeleton/skeleton';
@@ -1426,18 +1428,31 @@ const AlbumGridItem = memo(function AlbumGridItem({
     const [isHovered, setIsHovered] = useState(false);
     const downloadProgress = useDownloadStore((state) => state.downloads[album.id]?.progress);
     // A failed download stays in the store as history, but the card goes back to idle.
-    const isDownloading = downloadProgress !== undefined && downloadProgress.stage !== 'error';
+    const isDownloading =
+        downloadProgress !== undefined &&
+        downloadProgress.stage !== 'error' &&
+        downloadProgress.stage !== 'done';
 
     const handleDownload = () =>
-        startAlbumDownload(
-            {
-                album: album.name,
-                artist: album.albumArtistName,
-                id: album.id,
-                year: album.releaseYear,
-            },
-            album.albumArtists[0]?.id,
-        );
+        openModal({
+            children: (
+                <DownloadTagsModal
+                    onSubmit={(genres) =>
+                        startAlbumDownload(
+                            {
+                                album: album.name,
+                                artist: album.albumArtistName,
+                                genres,
+                                id: album.id,
+                                year: album.releaseYear,
+                            },
+                            album.albumArtists[0]?.id,
+                        )
+                    }
+                />
+            ),
+            title: t('download.action'),
+        });
 
     const trackCountClassName = isHovered
         ? `${styles.externalAlbumTrackCount} ${styles.externalAlbumTrackCountVisible}`
