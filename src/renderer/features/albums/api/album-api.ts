@@ -1,11 +1,27 @@
 import { queryOptions } from '@tanstack/react-query';
+import isElectron from 'is-electron';
 
 import { api } from '/@/renderer/api';
 import { controller } from '/@/renderer/api/controller';
 import { queryKeys } from '/@/renderer/api/query-keys';
 import { getOptimizedListCount } from '/@/renderer/api/utils-list-count';
 import { QueryHookArgs } from '/@/renderer/lib/react-query';
-import { AlbumDetailQuery, AlbumListQuery, ListCountQuery } from '/@/shared/types/domain-types';
+import {
+    AlbumDetailQuery,
+    AlbumListQuery,
+    ListCountQuery,
+    ServerType,
+} from '/@/shared/types/domain-types';
+
+interface ExternalAlbumQuery {
+    artistId: string;
+    artistName: string;
+}
+
+type ExternalAlbumQueryArgs = Omit<QueryHookArgs<ExternalAlbumQuery>, 'serverId'> & {
+    serverId?: string;
+    serverType?: ServerType;
+};
 
 export const albumQueries = {
     detail: (args: QueryHookArgs<AlbumDetailQuery>) => {
@@ -18,6 +34,25 @@ export const albumQueries = {
             },
             queryKey: queryKeys.albums.detail(args.serverId, args.query),
             ...args.options,
+        });
+    },
+    externalAlbums: (args: ExternalAlbumQueryArgs) => {
+        const serverId = args.serverId || '';
+
+        return queryOptions({
+            enabled: isElectron() && Boolean(serverId),
+            queryFn: () =>
+                window.api.external.getArtistAlbums({
+                    ...args.query,
+                    serverId,
+                    serverType: args.serverType || ServerType.JELLYFIN,
+                }),
+            queryKey: queryKeys.albumArtists.externalAlbums(
+                serverId,
+                args.query.artistId,
+                args.query.artistName,
+            ),
+            staleTime: 1000 * 60 * 60 * 24, // 24 hours
         });
     },
     list: (args: QueryHookArgs<AlbumListQuery>) => {

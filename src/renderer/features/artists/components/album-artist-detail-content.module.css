@@ -57,10 +57,39 @@
 }
 
 .album-grid-item {
+    position: relative;
     flex: 1 1
         calc((100% - (var(--items-per-row) - 1) * var(--theme-spacing-md)) / var(--items-per-row));
     min-width: 0;
     max-width: calc(
         (100% - (var(--items-per-row) - 1) * var(--theme-spacing-md)) / var(--items-per-row)
     );
+}
+
+.album-grid-item-content {
+    height: 100%;
+}
+
+.album-grid-item-unavailable {
+    opacity: 0.2 !important;
+}
+
+.external-album-track-count {
+    position: absolute;
+    top: var(--theme-spacing-md);
+    right: var(--theme-spacing-md);
+    z-index: 2;
+    padding: var(--theme-spacing-xs) var(--theme-spacing-sm);
+    font-size: var(--theme-font-size-sm);
+    font-weight: 600;
+    color: var(--theme-colors-foreground);
+    pointer-events: none;
+    background-color: rgb(0 0 0 / 70%);
+    border-radius: var(--theme-radius-md);
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.external-album-track-count-visible {
+    opacity: 1;
 }

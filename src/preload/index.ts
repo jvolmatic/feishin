@@ -5,6 +5,7 @@ import { browser } from './browser';
 import { customThemes } from './custom-themes';
 import { discordRpc } from './discord-rpc';
 import { dlnaPlayer, dlnaPlayerListener } from './dlna-player';
+import { external } from './external';
 import { ipc } from './ipc';
 import { localSettings } from './local-settings';
 import { lyrics } from './lyrics';
@@ -22,6 +23,7 @@ const api = {
     discordRpc,
     dlnaPlayer,
     dlnaPlayerListener,
+    external,
     getPathForFile: webUtils.getPathForFile,
     ipc,
     localSettings,

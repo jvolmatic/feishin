@@ -483,6 +483,7 @@
         "albumArtistDetail": {
             "about": "About {{artist}}",
             "appearsOn": "Appears on",
+            "availableAlbums": "Available albums",
             "favoriteSongs": "Favorite songs",
             "groupingTypeAll": "All release types",
             "groupingTypePrimary": "Primary release types",

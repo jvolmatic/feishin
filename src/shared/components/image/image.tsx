@@ -27,6 +27,7 @@ export interface ImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 's
     enableAnimation?: boolean;
     enableDebounce?: boolean;
     enableViewport?: boolean;
+    fallbackSrcs?: string[];
     fetchPriority?: 'auto' | 'high' | 'low';
     hashUrl?: null | string;
     imageContainerProps?: Omit<ImageContainerProps, 'children'>;
@@ -62,6 +63,7 @@ export function BaseImage({
     enableAnimation = false,
     enableDebounce = false,
     enableViewport = true,
+    fallbackSrcs,
     fetchPriority = 'low',
     hashUrl,
     imageContainerProps,
@@ -83,14 +85,36 @@ export function BaseImage({
         () => imageRequest ?? (src ? { cacheKey: src, url: src } : undefined),
         [imageRequest, src],
     );
-    const isInSessionCache = Boolean(
-        rawImageRequest?.cacheKey && loadedImageCacheKeys.has(rawImageRequest.cacheKey),
+    const imageRequests = useMemo(() => {
+        const requests = rawImageRequest ? [rawImageRequest] : [];
+        const seenUrls = new Set(requests.map((request) => request.url));
+
+        for (const fallbackSrc of fallbackSrcs || []) {
+            if (fallbackSrc && !seenUrls.has(fallbackSrc)) {
+                requests.push({ cacheKey: fallbackSrc, url: fallbackSrc });
+                seenUrls.add(fallbackSrc);
+            }
+        }
+
+        return requests;
+    }, [fallbackSrcs, rawImageRequest]);
+    const imageRequestSignature = useMemo(
+        () => imageRequests.map((request) => request.cacheKey).join('|'),
+        [imageRequests],
     );
-    const [debouncedImageRequest] = useDebouncedValue(rawImageRequest, 100, {
+    const [fallbackState, setFallbackState] = useState({ index: 0, signature: '' });
+    const fallbackIndex =
+        fallbackState.signature === imageRequestSignature ? fallbackState.index : 0;
+    const currentRawImageRequest = imageRequests[fallbackIndex];
+    const isInSessionCache = Boolean(
+        currentRawImageRequest?.cacheKey &&
+        loadedImageCacheKeys.has(currentRawImageRequest.cacheKey),
+    );
+    const [debouncedImageRequest] = useDebouncedValue(currentRawImageRequest, 100, {
         waitForInitial: true,
     });
     const effectiveImageRequest =
-        isInSessionCache || !enableDebounce ? rawImageRequest : debouncedImageRequest;
+        isInSessionCache || !enableDebounce ? currentRawImageRequest : debouncedImageRequest;
 
     const [hasLoadedInInstance, setHasLoadedInInstance] = useState(false);
 
@@ -106,8 +130,16 @@ export function BaseImage({
     const nativeImage = useNativeImage({
         enabled: shouldLoadImage,
         fetchPriority,
-        onFetchError: src
+        onFetchError: effectiveImageRequest
             ? () => {
+                  if (fallbackIndex + 1 < imageRequests.length) {
+                      setFallbackState({
+                          index: fallbackIndex + 1,
+                          signature: imageRequestSignature,
+                      });
+                      return;
+                  }
+
                   (onError as ((event: undefined) => void) | undefined)?.(undefined);
               }
             : undefined,

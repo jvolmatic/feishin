@@ -190,6 +190,7 @@ export type Album = {
     gain: GainInfo | null;
     genres: Genre[];
     id: string;
+    imageFallbackUrls?: string[];
     imageId: null | string;
     imageUrl: null | string;
     isCompilation: boolean | null;
@@ -279,6 +280,11 @@ export type Disc = Record<number, string>;
 
 export type EndpointDetails = {
     server: ServerListItem;
+};
+
+export type ExternalArtistAlbumResult = {
+    album: Album;
+    popularity: null | number;
 };
 
 export type Folder = {

@@ -22,6 +22,7 @@ import { SONG_TABLE_COLUMNS } from '/@/renderer/components/item-list/item-table-
 import { ItemTableList } from '/@/renderer/components/item-list/item-table-list/item-table-list';
 import { ItemTableListColumn } from '/@/renderer/components/item-list/item-table-list/item-table-list-column';
 import { ItemControls } from '/@/renderer/components/item-list/types';
+import { albumQueries } from '/@/renderer/features/albums/api/album-api';
 import { artistsQueries } from '/@/renderer/features/artists/api/artists-api';
 import { AlbumArtistGridCarousel } from '/@/renderer/features/artists/components/album-artist-grid-carousel';
 import { useIsPlayerFetching, usePlayer } from '/@/renderer/features/player/context/player-context';
@@ -61,6 +62,7 @@ import {
     useExternalLinks,
     useSettingsStore,
 } from '/@/renderer/store/settings.store';
+import { isExternalAlbum } from '/@/renderer/utils/external-album';
 import { sanitize } from '/@/renderer/utils/sanitize';
 import { sortAlbumList, sortSongList } from '/@/shared/api/utils';
 import { ActionIcon, ActionIconGroup } from '/@/shared/components/action-icon/action-icon';
@@ -95,6 +97,7 @@ import {
     SortOrder,
 } from '/@/shared/types/domain-types';
 import { ItemListKey, ListDisplayType, Play } from '/@/shared/types/types';
+import { normalizeAlbumTitle } from '/@/shared/utils/album-title';
 
 interface AlbumArtistActionButtonsProps {
     artistDiscographyLink: string;
@@ -1341,7 +1344,11 @@ export const AlbumArtistDetailContent = ({
                             routeId={routeId}
                         />
                     )}
-                    <ArtistAlbums albumsQuery={albumsQuery} order={itemOrder.recentAlbums} />
+                    <ArtistAlbums
+                        albumsQuery={albumsQuery}
+                        artistName={detailQuery.data?.name}
+                        order={itemOrder.recentAlbums}
+                    />
                     {enabledItem.similarArtists && (
                         <AlbumArtistMetadataSimilarArtists
                             order={itemOrder.similarArtists}
@@ -1371,6 +1378,7 @@ interface AlbumSectionProps {
     albums: Album[];
     controls: ItemControls;
     enableExpansion?: boolean;
+    isLoading?: boolean;
     itemsPerRow: number;
     releaseType: string;
     rows: DataRow[] | undefined;
@@ -1391,10 +1399,67 @@ const getItemsPerRow = (cq: ReturnType<typeof useContainerQuery>) => {
     return 2;
 };
 
+interface AlbumGridItemProps {
+    album: Album;
+    controls: ItemControls;
+    enableExpansion?: boolean;
+    releaseType: string;
+    rows: DataRow[] | undefined;
+}
+
+const AlbumGridItem = memo(function AlbumGridItem({
+    album,
+    controls,
+    enableExpansion,
+    releaseType,
+    rows,
+}: AlbumGridItemProps) {
+    const { t } = useTranslation();
+    const isExternal = isExternalAlbum(album);
+    const [isHovered, setIsHovered] = useState(false);
+
+    const trackCountClassName = isHovered
+        ? `${styles.externalAlbumTrackCount} ${styles.externalAlbumTrackCountVisible}`
+        : styles.externalAlbumTrackCount;
+
+    const cardWrapperClassName = isExternal
+        ? `${styles.albumGridItemContent} ${styles.albumGridItemUnavailable}`
+        : styles.albumGridItemContent;
+
+    return (
+        <motion.div
+            className={styles.albumGridItem}
+            layoutId={`${releaseType}-${album.id}`}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+        >
+            <div className={cardWrapperClassName}>
+                <MemoizedItemCard
+                    controls={isExternal ? undefined : controls}
+                    data={album}
+                    enableDrag={!isExternal}
+                    enableExpansion={!isExternal && (enableExpansion ?? true)}
+                    enableNavigation={!isExternal}
+                    itemType={LibraryItem.ALBUM}
+                    rows={rows}
+                    type="poster"
+                    withControls={!isExternal}
+                />
+            </div>
+            {isExternal && album.songCount ? (
+                <div className={trackCountClassName}>
+                    {t('entity.trackWithCount', { count: album.songCount })}
+                </div>
+            ) : null}
+        </motion.div>
+    );
+});
+
 const AlbumSection = memo(function AlbumSection({
     albums,
     controls,
     enableExpansion,
+    isLoading,
     itemsPerRow,
     releaseType,
     rows,
@@ -1408,14 +1473,15 @@ const AlbumSection = memo(function AlbumSection({
 
     const displayedAlbums = showAll ? albums : albums.slice(0, MAX_SECTION_CARDS);
     const hasMoreAlbums = albums.length > MAX_SECTION_CARDS;
+    const playableAlbums = albums.filter((album) => !isExternalAlbum(album));
 
     const handlePlay = useCallback(
         (playType: Play) => {
-            if (albums.length === 0) return;
-            const albumIds = albums.map((album) => album.id);
+            if (playableAlbums.length === 0) return;
+            const albumIds = playableAlbums.map((album) => album.id);
             player.addToQueueByFetch(serverId, albumIds, LibraryItem.ALBUM, playType);
         },
-        [albums, player, serverId],
+        [playableAlbums, player, serverId],
     );
 
     const handlePlayNext = usePlayButtonClick({
@@ -1447,22 +1513,14 @@ const AlbumSection = memo(function AlbumSection({
 
     const DisplayedAlbumsMemo = useMemo(() => {
         return displayedAlbums.map((album) => (
-            <motion.div
-                className={styles.albumGridItem}
+            <AlbumGridItem
+                album={album}
+                controls={controls}
+                enableExpansion={enableExpansion}
                 key={album.id}
-                layoutId={`${releaseType}-${album.id}`}
-            >
-                <MemoizedItemCard
-                    controls={controls}
-                    data={album}
-                    enableDrag
-                    enableExpansion={enableExpansion ?? true}
-                    itemType={LibraryItem.ALBUM}
-                    rows={rows}
-                    type="poster"
-                    withControls
-                />
-            </motion.div>
+                releaseType={releaseType}
+                rows={rows}
+            />
         ));
     }, [controls, displayedAlbums, enableExpansion, releaseType, rows]);
 
@@ -1473,11 +1531,11 @@ const AlbumSection = memo(function AlbumSection({
                     <TextTitle fw={700} order={3}>
                         {title}
                     </TextTitle>
-                    <Badge variant="default">{albumCount}</Badge>
+                    {!isLoading && <Badge variant="default">{albumCount}</Badge>}
                 </Group>
                 <div className={styles.albumSectionDividerContainer}>
                     <div className={styles.albumSectionDivider} />
-                    {albumCount > 0 && (
+                    {!isLoading && playableAlbums.length > 0 && (
                         <ActionIconGroup>
                             <PlayTooltip type={Play.NOW}>
                                 <ActionIcon
@@ -1519,16 +1577,22 @@ const AlbumSection = memo(function AlbumSection({
                     )}
                 </div>
             </div>
-            <div
-                className={styles.albumGrid}
-                style={
-                    {
-                        '--items-per-row': itemsPerRow,
-                    } as React.CSSProperties
-                }
-            >
-                {DisplayedAlbumsMemo}
-            </div>
+            {isLoading ? (
+                <Group justify="center" py="xl" w="100%">
+                    <Spinner container />
+                </Group>
+            ) : (
+                <div
+                    className={styles.albumGrid}
+                    style={
+                        {
+                            '--items-per-row': itemsPerRow,
+                        } as React.CSSProperties
+                    }
+                >
+                    {DisplayedAlbumsMemo}
+                </div>
+            )}
             {hasMoreAlbums && !showAll && (
                 <Group justify="center" w="100%">
                     <Button onClick={() => setShowAll(true)} variant="subtle">
@@ -1544,10 +1608,11 @@ import { useArtistAlbumsGrouped } from '/@/renderer/features/artists/hooks/use-a
 
 interface ArtistAlbumsProps {
     albumsQuery: UseSuspenseQueryResult<AlbumListResponse, Error>;
+    artistName?: string;
     order?: number;
 }
 
-const ArtistAlbums = ({ albumsQuery, order }: ArtistAlbumsProps) => {
+const ArtistAlbums = ({ albumsQuery, artistName, order }: ArtistAlbumsProps) => {
     const { t } = useTranslation();
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearchTerm] = useDebouncedValue(searchTerm, 300);
@@ -1555,24 +1620,69 @@ const ArtistAlbums = ({ albumsQuery, order }: ArtistAlbumsProps) => {
     const setAlbumArtistDetailSort = useAppStore((state) => state.actions.setAlbumArtistDetailSort);
     const sortBy = albumArtistDetailSort.sortBy;
     const sortOrder = albumArtistDetailSort.sortOrder;
+    const server = useCurrentServer();
 
     const { albumArtistId, artistId } = useParams() as {
         albumArtistId?: string;
         artistId?: string;
     };
     const routeId = (artistId || albumArtistId) as string;
+    const resolvedArtistName = artistName || albumsQuery.data?.items?.[0]?.albumArtistName || '';
+    const externalAlbumsQuery = useQuery(
+        albumQueries.externalAlbums({
+            query: {
+                artistId: routeId,
+                artistName: resolvedArtistName,
+            },
+            serverId: server?.id,
+            serverType: server?.type,
+        }),
+    );
 
     const rows = useGridRows(LibraryItem.ALBUM, ItemListKey.ALBUM);
 
-    const filteredAndSortedAlbums = useMemo(() => {
+    const { externalAlbums, serverAlbums } = useMemo(() => {
         const albums = albumsQuery.data?.items || [];
-        const searched = searchLibraryItems(albums, debouncedSearchTerm, LibraryItem.ALBUM);
-        return sortAlbumList(searched, sortBy, sortOrder);
-    }, [albumsQuery.data?.items, debouncedSearchTerm, sortBy, sortOrder]);
+        const knownAlbumNames = new Set(albums.map((album) => normalizeAlbumTitle(album.name)));
+        const serverAlbums = sortAlbumList(
+            searchLibraryItems(albums, debouncedSearchTerm, LibraryItem.ALBUM),
+            sortBy,
+            sortOrder,
+        );
+        const externalAlbums = (externalAlbumsQuery.data || []).filter(
+            ({ album }) => !knownAlbumNames.has(normalizeAlbumTitle(album.name)),
+        );
+        const filteredExternalAlbums = searchLibraryItems(
+            externalAlbums.map(({ album }) => album),
+            debouncedSearchTerm,
+            LibraryItem.ALBUM,
+        );
+        const popularityByAlbumId = new Map(
+            externalAlbums.map(({ album, popularity }) => [album.id, popularity]),
+        );
+        const rankedExternalAlbums = [...filteredExternalAlbums].sort((a, b) => {
+            const popularityA = popularityByAlbumId.get(a.id) ?? null;
+            const popularityB = popularityByAlbumId.get(b.id) ?? null;
+            if (popularityA !== popularityB) {
+                if (popularityA === null) return 1;
+                if (popularityB === null) return -1;
+                return popularityB - popularityA;
+            }
+
+            const yearA = a.releaseYear || a.originalYear || 0;
+            const yearB = b.releaseYear || b.originalYear || 0;
+            return yearB - yearA;
+        });
+
+        return { externalAlbums: rankedExternalAlbums, serverAlbums };
+    }, [albumsQuery.data?.items, debouncedSearchTerm, externalAlbumsQuery.data, sortBy, sortOrder]);
 
     const controls = useDefaultItemListControls();
 
-    const { releaseTypeEntries } = useArtistAlbumsGrouped(filteredAndSortedAlbums, routeId);
+    const { releaseTypeEntries } = useArtistAlbumsGrouped(serverAlbums, routeId);
+    const isExternalAlbumsLoading = externalAlbumsQuery.isLoading;
+    const showExternalAlbums = isExternalAlbumsLoading || externalAlbums.length > 0;
+    const hasAlbums = releaseTypeEntries.length > 0 || showExternalAlbums;
 
     const cq = useContainerQuery({
         '2xl': 1280,
@@ -1658,11 +1768,32 @@ const ArtistAlbums = ({ albumsQuery, order }: ArtistAlbumsProps) => {
                     />
                     <GroupingTypeSelector />
                 </Group>
-                {releaseTypeEntries.length > 0 && (
-                    <div className={styles.albumSectionContainer} ref={cq.ref}>
-                        {cq.isCalculated && <>{ReleaseTypeEntriesMemo}</>}
-                    </div>
-                )}
+                <div className={styles.albumSectionContainer} ref={cq.ref}>
+                    {cq.isCalculated && ReleaseTypeEntriesMemo}
+                    {showExternalAlbums ? (
+                        <AlbumSection
+                            albums={externalAlbums}
+                            controls={controls}
+                            isLoading={isExternalAlbumsLoading}
+                            itemsPerRow={itemsPerRow}
+                            releaseType="external"
+                            rows={rows}
+                            title={t('page.albumArtistDetail.availableAlbums')}
+                        />
+                    ) : null}
+                    {!hasAlbums && (
+                        <Stack gap="md">
+                            <TextTitle fw={700} order={3}>
+                                {t('entity.album', { count: 2 })}
+                            </TextTitle>
+                            <Center py="xl" w="100%">
+                                <Text fw={500} isMuted isNoSelect size="sm">
+                                    {t('common.noResultsFromQuery')}
+                                </Text>
+                            </Center>
+                        </Stack>
+                    )}
+                </div>
             </Stack>
         </Grid.Col>
     );

@@ -76,6 +76,8 @@ export const queryKeys: Record<
 
             return [serverId, 'albumArtists', 'detail'] as const;
         },
+        externalAlbums: (serverId: string, artistId: string, artistName: string) =>
+            [serverId, 'albumArtists', 'externalAlbums', artistId, artistName] as const,
         favoriteSongs: (serverId: string, query?: FavoriteSongListQuery) => {
             if (query) {
                 return [serverId, 'albumArtists', 'favoriteSongs', query] as const;

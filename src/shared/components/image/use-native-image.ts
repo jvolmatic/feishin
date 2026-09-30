@@ -4,6 +4,14 @@ import { ImageRequest } from '/@/shared/types/domain-types';
 
 type FetchPriority = 'auto' | 'high' | 'low';
 
+// External image hosts rate limit bursts of grid loads with a
+// 429. Back off and try again before falling through to the next source.
+const RETRY_DELAY_MS = [3000, 10000];
+
+const isRetryableStatus = (status: number) => status === 408 || status === 429 || status >= 500;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 interface NativeImageState {
     displaySrc?: string;
     status: 'error' | 'idle' | 'loaded' | 'loading';
@@ -100,7 +108,21 @@ export function useNativeImage({
                     init.priority = fetchPriority;
                 }
 
-                const response = await fetch(request.url, init);
+                let response = await fetch(request.url, init);
+
+                for (const retryDelay of RETRY_DELAY_MS) {
+                    if (response.ok || !isRetryableStatus(response.status)) {
+                        break;
+                    }
+
+                    await sleep(retryDelay);
+
+                    if (abortController.signal.aborted) {
+                        return;
+                    }
+
+                    response = await fetch(request.url, init);
+                }
 
                 if (!response.ok) {
                     throw new Error(`Failed to load image: ${response.status}`);

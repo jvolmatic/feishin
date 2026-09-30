@@ -20,6 +20,7 @@ import { JoinedArtists } from '/@/renderer/features/albums/components/joined-art
 import { useDragDrop } from '/@/renderer/hooks/use-drag-drop';
 import { AppRoute } from '/@/renderer/router/routes';
 import { useShowFavorites, useShowRatings } from '/@/renderer/store';
+import { isExternalAlbum } from '/@/renderer/utils/external-album';
 import {
     formatDateAbsolute,
     formatDateRelative,
@@ -263,6 +264,7 @@ const ItemCardStandardImageArea = memo(function ItemCardStandardImageArea({
                     explicitStatus={'explicitStatus' in data && data ? data.explicitStatus : null}
                     fetchPriority={imageFetchPriority}
                     id={(data as { imageId?: string })?.imageId}
+                    imageFallbackUrls={(data as Album)?.imageFallbackUrls}
                     itemType={itemType}
                     src={(data as { imageUrl?: string })?.imageUrl}
                     thumbHash={(data as Album | AlbumArtist | Playlist | Song)?.thumbHash}
@@ -403,6 +405,7 @@ const CompactItemCardImageArea = memo(function CompactItemCardImageArea({
                     explicitStatus={'explicitStatus' in data && data ? data.explicitStatus : null}
                     fetchPriority={imageFetchPriority}
                     id={data?.imageId}
+                    imageFallbackUrls={(data as Album)?.imageFallbackUrls}
                     itemType={itemType}
                     src={(data as Album | AlbumArtist | Playlist | Song)?.imageUrl}
                     thumbHash={(data as Album | AlbumArtist | Playlist | Song)?.thumbHash}
@@ -1099,7 +1102,12 @@ export const getDataRows = (type?: 'compact' | 'default' | 'poster'): DataRow[] 
                         if ('_itemType' in data) {
                             switch (data._itemType) {
                                 case LibraryItem.ALBUM:
-                                    return (
+                                    return isExternalAlbum(data) ? (
+                                        <>
+                                            <ExplicitIndicator explicitStatus={explicitStatus} />
+                                            {data.name}
+                                        </>
+                                    ) : (
                                         <Link
                                             state={{ item: data }}
                                             to={generatePath(AppRoute.LIBRARY_ALBUMS_DETAIL, {

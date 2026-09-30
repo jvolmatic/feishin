@@ -41,6 +41,7 @@ const BaseItemImage = (
         dominantColor?: null | string;
         explicitStatus?: ExplicitStatus | null;
         id?: null | string;
+        imageFallbackUrls?: string[];
         itemType: LibraryItem;
         serverId?: null | string;
         size?: number;
@@ -49,8 +50,17 @@ const BaseItemImage = (
         type?: keyof z.infer<typeof GeneralSettingsSchema>['imageRes'];
     },
 ) => {
-    const { blurHash, dominantColor, explicitStatus, serverId, size, src, thumbHash, ...rest } =
-        props;
+    const {
+        blurHash,
+        dominantColor,
+        explicitStatus,
+        imageFallbackUrls,
+        serverId,
+        size,
+        src,
+        thumbHash,
+        ...rest
+    } = props;
     const { blurExplicitImages } = useGeneralSettings();
     const imagePlaceholderPriority = useImagePlaceholderPriority();
     const hashUrl = useImageHashUrl(thumbHash, blurHash, dominantColor, imagePlaceholderPriority);
@@ -77,6 +87,7 @@ const BaseItemImage = (
 
     return (
         <BaseImage
+            fallbackSrcs={imageFallbackUrls}
             hashUrl={hashUrl}
             imageRequest={imageRequest}
             isExplicit={isExplicit}
