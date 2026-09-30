@@ -31,19 +31,11 @@
 
 Rewrite of [Sonixd](https://github.com/jeffvli/sonixd).
 
-## Features
+## Custom additional features
 
-- [x] MPV player backend
-- [x] Web player backend
-- [x] Modern UI
-- [x] Scrobble playback to your server
-- [x] Smart playlist editor (Navidrome)
-- [x] Synchronized and unsynchronized lyrics support
-- [ ] [Request a feature](https://github.com/jeffvli/feishin/issues) or [view taskboard](https://github.com/users/jeffvli/projects/5/views/1)
-
-## Screenshots
-
-<a href="./media/preview_full_screen_player.png"><img src="./media/preview_full_screen_player.png" width="49.5%"/></a> <a href="./media/preview_album_artist_detail.png"><img src="./media/preview_album_artist_detail.png" width="49.5%"/></a> <a href="./media/preview_album_detail.png"><img src="./media/preview_album_detail.png" width="49.5%"/></a> <a href="./media/preview_smart_playlist.png"><img src="./media/preview_smart_playlist.png" width="49.5%"/></a>
+- [x] View all available artists and their albums
+- [ ] Download albums with yt-dlp directly from the app 
+- [x] Playlist manager
 
 ## Getting Started
 
@@ -200,6 +192,7 @@ This project is built off of [electron-vite](https://github.com/alex8088/electro
 - `pnpm run build:web` - Build the standalone web app (renderer)
 - `pnpm run package` - Package the project
 - `pnpm run package:dev` - Package the project for development locally
+- `pnpm run package:custom` - Package the project for Linux locally, and additionally creates a .desktop file with "Custom Feishin". See scripts/install-custom.sh
 - `pnpm run package:linux` - Package the project for Linux locally
 - `pnpm run package:mac` - Package the project for Mac locally
 - `pnpm run package:win` - Package the project for Windows locally

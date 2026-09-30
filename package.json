@@ -40,6 +40,7 @@
         "lint-styles": "stylelint --max-warnings=0 'src/**/*.{css,scss}'",
         "lint-styles:fix": "stylelint 'src/**/*.{css,scss}' --fix",
         "package": "pnpm run build && electron-builder",
+        "package:custom": "bash scripts/install-custom.sh",
         "package:dev": "pnpm run build && electron-builder --dir",
         "package:linux": "pnpm run build && electron-builder --linux",
         "package:linux:pr": "pnpm run build && electron-builder --linux --publish never",
