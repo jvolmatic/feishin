@@ -93,3 +93,54 @@
 .external-album-track-count-visible {
     opacity: 1;
 }
+
+.external-album-download {
+    position: absolute;
+    inset: 0 0 auto;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1 / 1;
+
+    /* Sits above the card, which would otherwise lose its hover state when the pointer is on
+       the button. The tint stands in for the card's own (dimmed) hover overlay. */
+    background-color: rgb(0 0 0 / 15%);
+    border-radius: var(--theme-radius-md);
+}
+
+/* Doubled selector to outrank the ActionIcon `[data-variant='filled']` theme colours. */
+.external-album-download-button.external-album-download-button[data-variant] {
+    width: 3rem;
+    height: 3rem;
+    color: rgb(0 0 0);
+    background: rgb(255 255 255);
+    border-radius: 50%;
+    transition: transform 0.2s ease-in-out;
+
+    svg {
+        color: rgb(0 0 0);
+        fill: rgb(0 0 0);
+    }
+
+    &:hover,
+    &:focus-visible {
+        background: rgb(255 255 255);
+        transform: scale(1.1);
+    }
+
+    &:active {
+        transform: scale(0.9);
+    }
+}
+
+.external-album-progress {
+    display: flex;
+    flex-direction: column;
+    gap: var(--theme-spacing-xs);
+    width: 80%;
+    padding: var(--theme-spacing-sm);
+    text-align: center;
+    background-color: rgb(0 0 0 / 70%);
+    border-radius: var(--theme-radius-md);
+}

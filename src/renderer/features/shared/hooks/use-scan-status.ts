@@ -61,7 +61,7 @@ export const startScanWatch = () => {
     }, SCAN_WATCH_TIMEOUT_MS);
 };
 
-const invalidateLibraryQueriesAfterScan = (queryClient: QueryClient, serverId: string) => {
+export const invalidateLibraryQueriesAfterScan = (queryClient: QueryClient, serverId: string) => {
     return Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.songs.root(serverId) }),
         queryClient.invalidateQueries({ queryKey: queryKeys.albums.root(serverId) }),

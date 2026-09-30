@@ -52,7 +52,17 @@ const getExternalArtistAlbums = async (
     // result with the highest popularity (falling back to provider order), and pool
     // every provider's images so a missing cover from one provider can fall back to
     // another's.
-    const merged = new Map<string, { images: Set<string>; result: ExternalArtistAlbumResult }>();
+    const merged = new Map<
+        string,
+        { images: Set<string>; result: ExternalArtistAlbumResult; youtubeSongCount?: number }
+    >();
+
+    // Downloads come from YouTube Music, so its (filtered) track count is the one that matches
+    // what will actually be downloaded, even when another provider's entry is preferred.
+    const getYoutubeSongCount = (result: ExternalArtistAlbumResult) =>
+        result.album.id.startsWith('external:youtube-music:')
+            ? (result.album.songCount ?? undefined)
+            : undefined;
 
     for (const result of albums) {
         const key = normalizeAlbumTitle(result.album.name);
@@ -62,9 +72,11 @@ const getExternalArtistAlbums = async (
             const images = new Set<string>();
             if (result.album.imageUrl) images.add(result.album.imageUrl);
             result.album.imageFallbackUrls?.forEach((imageUrl) => images.add(imageUrl));
-            merged.set(key, { images, result });
+            merged.set(key, { images, result, youtubeSongCount: getYoutubeSongCount(result) });
             continue;
         }
+
+        existing.youtubeSongCount ??= getYoutubeSongCount(result);
 
         if (result.album.imageUrl) existing.images.add(result.album.imageUrl);
         result.album.imageFallbackUrls?.forEach((imageUrl) => existing.images.add(imageUrl));
@@ -76,7 +88,7 @@ const getExternalArtistAlbums = async (
     }
 
     return Promise.all(
-        [...merged.values()].map(async ({ images, result }) => {
+        [...merged.values()].map(async ({ images, result, youtubeSongCount }) => {
             if (images.size === 0) {
                 try {
                     const cover = await getExternalAlbumCover(query.artistName, result.album.name);
@@ -95,6 +107,7 @@ const getExternalArtistAlbums = async (
                     ...result.album,
                     imageFallbackUrls,
                     imageUrl: imageUrl || result.album.imageUrl,
+                    songCount: youtubeSongCount ?? result.album.songCount,
                 },
             };
         }),

@@ -1,8 +1,12 @@
 allowBuilds:
     abstract-socket: true
+    cpu-features: false
     electron: false
     electron-winstaller: true
     esbuild: true
+    ssh2: false
+ignoredOptionalDependencies:
+    - cpu-features
 minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
     - 'taglib-wasm@1.5.1'

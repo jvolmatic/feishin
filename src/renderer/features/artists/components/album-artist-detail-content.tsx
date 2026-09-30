@@ -4,6 +4,7 @@ import {
     useSuspenseQuery,
     UseSuspenseQueryResult,
 } from '@tanstack/react-query';
+import isElectron from 'is-electron';
 import { motion } from 'motion/react';
 import { memo, Suspense, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -25,6 +26,11 @@ import { ItemControls } from '/@/renderer/components/item-list/types';
 import { albumQueries } from '/@/renderer/features/albums/api/album-api';
 import { artistsQueries } from '/@/renderer/features/artists/api/artists-api';
 import { AlbumArtistGridCarousel } from '/@/renderer/features/artists/components/album-artist-grid-carousel';
+import {
+    getDownloadPercent,
+    startAlbumDownload,
+    useDownloadStore,
+} from '/@/renderer/features/artists/store/download.store';
 import { useIsPlayerFetching, usePlayer } from '/@/renderer/features/player/context/player-context';
 import {
     ListConfigMenu,
@@ -73,6 +79,7 @@ import { DropdownMenu } from '/@/shared/components/dropdown-menu/dropdown-menu';
 import { Grid } from '/@/shared/components/grid/grid';
 import { Group } from '/@/shared/components/group/group';
 import { Icon } from '/@/shared/components/icon/icon';
+import { Progress } from '/@/shared/components/progress/progress';
 import { SegmentedControl } from '/@/shared/components/segmented-control/segmented-control';
 import { Skeleton } from '/@/shared/components/skeleton/skeleton';
 import { Spinner } from '/@/shared/components/spinner/spinner';
@@ -1417,6 +1424,20 @@ const AlbumGridItem = memo(function AlbumGridItem({
     const { t } = useTranslation();
     const isExternal = isExternalAlbum(album);
     const [isHovered, setIsHovered] = useState(false);
+    const downloadProgress = useDownloadStore((state) => state.downloads[album.id]?.progress);
+    // A failed download stays in the store as history, but the card goes back to idle.
+    const isDownloading = downloadProgress !== undefined && downloadProgress.stage !== 'error';
+
+    const handleDownload = () =>
+        startAlbumDownload(
+            {
+                album: album.name,
+                artist: album.albumArtistName,
+                id: album.id,
+                year: album.releaseYear,
+            },
+            album.albumArtists[0]?.id,
+        );
 
     const trackCountClassName = isHovered
         ? `${styles.externalAlbumTrackCount} ${styles.externalAlbumTrackCountVisible}`
@@ -1449,6 +1470,39 @@ const AlbumGridItem = memo(function AlbumGridItem({
             {isExternal && album.songCount ? (
                 <div className={trackCountClassName}>
                     {t('entity.trackWithCount', { count: album.songCount })}
+                </div>
+            ) : null}
+            {isExternal && isElectron() && (isHovered || isDownloading) ? (
+                <div className={styles.externalAlbumDownload}>
+                    {isDownloading ? (
+                        <div className={styles.externalAlbumProgress}>
+                            <Text size="sm">
+                                {t(`download.stage_${downloadProgress.stage}`)}
+                                {downloadProgress.total
+                                    ? ` (${downloadProgress.done ?? 0}/${downloadProgress.total})`
+                                    : ''}
+                            </Text>
+                            {downloadProgress.stage === 'scanning' ? (
+                                <Center>
+                                    <Spinner size="lg" />
+                                </Center>
+                            ) : (
+                                <Progress
+                                    animated={!downloadProgress.total}
+                                    value={getDownloadPercent(downloadProgress)}
+                                />
+                            )}
+                        </div>
+                    ) : (
+                        <ActionIcon
+                            className={styles.externalAlbumDownloadButton}
+                            icon="download"
+                            iconProps={{ size: 'xl' }}
+                            onClick={handleDownload}
+                            tooltip={{ label: t('download.action') }}
+                            variant="filled"
+                        />
+                    )}
                 </div>
             ) : null}
         </motion.div>

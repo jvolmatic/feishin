@@ -1,8 +1,10 @@
-import { memo, useMemo } from 'react';
+import isElectron from 'is-electron';
+import { ComponentType, memo, useMemo } from 'react';
 import { Fragment } from 'react/jsx-runtime';
 
 import { ApplicationSettings } from '/@/renderer/features/settings/components/general/application-settings';
 import { ControlSettings } from '/@/renderer/features/settings/components/general/control-settings';
+import { DownloadSettings } from '/@/renderer/features/settings/components/general/download-settings';
 import { ExternalLinksSettings } from '/@/renderer/features/settings/components/general/external-links-settings';
 import { LyricSettings } from '/@/renderer/features/settings/components/general/lyric-settings';
 import { QueryBuilderSettings } from '/@/renderer/features/settings/components/general/query-builder-settings';
@@ -20,7 +22,7 @@ export const GeneralTab = memo(() => {
     const supportsSmartPlaylists = hasFeature(server, ServerFeature.PLAYLISTS_SMART);
 
     const sections = useMemo(() => {
-        const baseSections = [
+        const baseSections: Array<{ component: ComponentType; key: string }> = [
             { component: ThemeSettings, key: 'theme' },
             { component: ApplicationSettings, key: 'application' },
             { component: ExternalLinksSettings, key: 'externalLinks' },
@@ -29,6 +31,10 @@ export const GeneralTab = memo(() => {
             { component: ScrobbleSettings, key: 'scrobble' },
             { component: LyricSettings, key: 'lyrics' },
         ];
+
+        if (isElectron()) {
+            baseSections.push({ component: DownloadSettings, key: 'download' });
+        }
 
         if (supportsSmartPlaylists) {
             baseSections.push({ component: QueryBuilderSettings, key: 'queryBuilder' });

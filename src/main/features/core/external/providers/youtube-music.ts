@@ -8,6 +8,7 @@ import {
     ServerType,
 } from '/@/shared/types/domain-types';
 import { isNonAlbumTitle, isSameAlbum, isSingleOrEpTitle } from '/@/shared/utils/album-title';
+import { isUnwantedTrackTitle } from '/@/shared/utils/track-title';
 
 interface ArtistAlbumsQuery {
     artistId: string;
@@ -122,9 +123,11 @@ export const getArtistAlbums = async ({
             }
 
             const full = await client.getAlbum(match.albumId);
-            if (full.songs.length <= 1) return;
+            // Count only tracks the download keeps (skits, live versions etc. are skipped).
+            const songCount = full.songs.filter((song) => !isUnwantedTrackTitle(song.name)).length;
+            if (songCount <= 1) return;
 
-            resolvedAlbums.push({ listedAlbum, songCount: full.songs.length });
+            resolvedAlbums.push({ listedAlbum, songCount });
         } catch (error) {
             log.warn('Failed to resolve YouTube Music album track count', error);
         }

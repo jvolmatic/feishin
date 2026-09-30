@@ -1,0 +1,28 @@
+.row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--theme-spacing-xs);
+    padding: var(--theme-spacing-sm) var(--theme-spacing-md);
+}
+
+.header {
+    display: flex;
+    gap: var(--theme-spacing-xs);
+    align-items: center;
+    justify-content: space-between;
+}
+
+.artist-link {
+    color: inherit;
+    text-decoration: none;
+
+    &:hover {
+        color: var(--theme-colors-foreground);
+        text-decoration: underline;
+    }
+}
+
+.error-icon {
+    display: flex;
+    flex-shrink: 0;
+}

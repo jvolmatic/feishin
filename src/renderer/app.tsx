@@ -10,6 +10,7 @@ import isElectron from 'is-electron';
 import { lazy, memo, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 
 import i18n from '/@/i18n/i18n';
+import { initDownloadListener } from '/@/renderer/features/artists/store/download.store';
 import { WebAudioContext } from '/@/renderer/features/player/context/webaudio-context';
 import { useCheckForUpdates } from '/@/renderer/hooks/use-check-for-updates';
 import { useFullscreenAutoOpen } from '/@/renderer/hooks/use-fullscreen-auto-open';
@@ -119,6 +120,7 @@ const AppEffects = () => (
         <CssSettingsEffect />
         <GlobalShortcutsEffect />
         <LanguageEffect />
+        <DownloadListenerEffect />
         <NativeMenuSyncEffect />
         <FullscreenToggleEffect />
         <FullscreenAutoOpenEffect />
@@ -256,6 +258,15 @@ const LanguageEffect = () => {
             i18n.changeLanguage(language);
         }
     }, [language]);
+
+    return null;
+};
+
+const DownloadListenerEffect = () => {
+    useEffect(() => {
+        if (!isElectron()) return;
+        return initDownloadListener();
+    }, []);
 
     return null;
 };

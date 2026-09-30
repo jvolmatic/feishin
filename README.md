@@ -1,6 +1,6 @@
 <img src="assets/icons/icon.png" alt="logo" title="feishin" align="right" height="60px" width="60px" />
 
-# Feishin
+# Custom Feishin
 
   <p align="center">
     <a href="https://github.com/jeffvli/feishin/blob/main/LICENSE">
@@ -35,6 +35,7 @@ Rewrite of [Sonixd](https://github.com/jeffvli/sonixd).
 
 - [x] View all available artists and their albums
 - [ ] Download albums with yt-dlp directly from the app 
+- [ ] Edit metatags  
 - [x] Playlist manager
 
 ## Getting Started

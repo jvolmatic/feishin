@@ -1,4 +1,5 @@
 import clsx from 'clsx';
+import isElectron from 'is-electron';
 import { AnimatePresence, motion } from 'motion/react';
 import { MouseEvent, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,6 +14,7 @@ import {
 } from '/@/renderer/features/radio/hooks/use-radio-player';
 import { ActionBar } from '/@/renderer/features/sidebar/components/action-bar';
 import { SidebarCollectionList } from '/@/renderer/features/sidebar/components/sidebar-collection-list';
+import { SidebarDownloadList } from '/@/renderer/features/sidebar/components/sidebar-download-list';
 import { SidebarIcon } from '/@/renderer/features/sidebar/components/sidebar-icon';
 import { SidebarItem } from '/@/renderer/features/sidebar/components/sidebar-item';
 import {
@@ -136,7 +138,7 @@ export const Sidebar = () => {
                         item: styles.accordionItem,
                         root: styles.accordionRoot,
                     }}
-                    defaultValue={['library', 'collections', 'playlists']}
+                    defaultValue={['library', 'collections', 'playlists', 'downloads']}
                     multiple
                 >
                     <Accordion.Item value="library">
@@ -160,6 +162,7 @@ export const Sidebar = () => {
                     </Accordion.Item>
                     <SidebarCollectionList />
                     {sidebarPlaylistList && <SidebarPlaylistSection />}
+                    {isElectron() && <SidebarDownloadList />}
                 </Accordion>
             </ScrollArea>
             <AnimatePresence initial={false} mode="popLayout">
