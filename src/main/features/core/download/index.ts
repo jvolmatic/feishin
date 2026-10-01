@@ -88,7 +88,11 @@ const run = (
     signal?: AbortSignal,
 ): Promise<RunResult> =>
     new Promise((resolve, reject) => {
-        const child = spawn(cmd, args, { signal, stdio: ['ignore', 'pipe', 'pipe'] });
+        // The VS Code debugger injects these into the environment; yt-dlp's Deno runtime chokes on them.
+        const env = { ...process.env };
+        delete env.NODE_OPTIONS;
+        delete env.VSCODE_INSPECTOR_OPTIONS;
+        const child = spawn(cmd, args, { env, signal, stdio: ['ignore', 'pipe', 'pipe'] });
         let stdout = '';
         let stderr = '';
         let buffer = '';
@@ -473,7 +477,9 @@ const downloadAlbum = async (request: DownloadAlbumRequest) => {
                 [
                     '-x',
                     '-f',
-                    'ba[ext=m4a]',
+                    'ba[ext=m4a]/ba/b',
+                    '--audio-format',
+                    'm4a',
                     ...cookieArgs,
                     // Needed to solve YouTube's "n" challenge; the first runtime found is used.
                     '--js-runtimes',

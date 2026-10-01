@@ -1330,6 +1330,7 @@ export const AlbumArtistDetailContent = ({
     // Use a very low order number to ensure they appear first
     const genresOrder = 0;
     const externalLinksOrder = 0.5;
+    const topSongsOrder = 0.75;
 
     return (
         <div className={styles.contentContainer}>
@@ -1380,7 +1381,7 @@ export const AlbumArtistDetailContent = ({
                     {enabledItem.topSongs && (
                         <AlbumArtistMetadataTopSongs
                             detailQuery={detailQuery}
-                            order={itemOrder.topSongs}
+                            order={topSongsOrder}
                             routeId={routeId}
                         />
                     )}

@@ -36,7 +36,7 @@ import { Spoiler } from '/@/shared/components/spoiler/spoiler';
 import { Stack } from '/@/shared/components/stack/stack';
 import { TextTitle } from '/@/shared/components/text-title/text-title';
 import { Text } from '/@/shared/components/text/text';
-import { LibraryItem } from '/@/shared/types/domain-types';
+import { AlbumArtist, LibraryItem } from '/@/shared/types/domain-types';
 import { ItemListKey } from '/@/shared/types/types';
 
 const ExternalArtistDetailRoute = () => {
@@ -64,7 +64,11 @@ const ExternalArtistDetailRoute = () => {
         useExternalLinks();
     const detailQuery = useQuery(searchQueries.externalArtistDetail(artistName));
     const detail = detailQuery.data;
-    const imageUrl = detail?.imageUrl || stateImageUrl;
+    // Prefer the image of the card that was clicked (a URL or a server image id) so the page matches it.
+    const stateItem: AlbumArtist | undefined = location.state?.item;
+    const hasStateImage = Boolean(stateImageUrl || stateItem?.imageId);
+    const imageUrl = stateImageUrl || (stateItem?.imageId ? undefined : detail?.imageUrl);
+    const imageFallbackUrls = hasStateImage ? stateItem?.imageFallbackUrls : detail?.imageFallbackUrls;
     const { background } = useFastAverageColor({ id: artistName, src: imageUrl, srcLoaded: true });
 
     const { artists: similarArtists, isLoading: isRelatedLoading } = useRelatedArtists(artistName);
@@ -110,9 +114,10 @@ const ExternalArtistDetailRoute = () => {
                 )}
                 <LibraryContainer>
                     <LibraryHeader
-                        imageFallbackUrls={detail?.imageFallbackUrls}
+                        imageFallbackUrls={imageFallbackUrls}
                         imageUrl={imageUrl}
                         item={{
+                            imageId: stateItem?.imageId,
                             imageUrl,
                             route: AppRoute.LIBRARY_ALBUM_ARTISTS,
                             type: LibraryItem.ALBUM_ARTIST,
