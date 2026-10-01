@@ -128,3 +128,23 @@ export const useAlbumTrackPlays = (songs: Song[]): SongWithExternalPlays[] => {
         ],
     );
 };
+
+const MIN_PLAYS_WEIGHT = 400;
+const MAX_PLAYS_WEIGHT = 800;
+
+/** Font weight of a play count within an album: heavier the closer it is to the most played track. */
+export const getPlaysFontWeight = (
+    plays: null | number | undefined,
+    allPlays: Array<null | number | undefined>,
+) => {
+    if (typeof plays !== 'number') return MIN_PLAYS_WEIGHT;
+
+    const known = allPlays.filter((value): value is number => typeof value === 'number');
+    const min = Math.min(...known);
+    const max = Math.max(...known);
+    if (max === min) return MIN_PLAYS_WEIGHT;
+
+    const weight =
+        MIN_PLAYS_WEIGHT + ((plays - min) / (max - min)) * (MAX_PLAYS_WEIGHT - MIN_PLAYS_WEIGHT);
+    return Math.round(weight / 100) * 100;
+};

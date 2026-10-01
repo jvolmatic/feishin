@@ -2,7 +2,7 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import clsx from 'clsx';
 import formatDuration from 'format-duration';
 import { motion } from 'motion/react';
-import { Fragment, Suspense, useCallback, useRef } from 'react';
+import { Fragment, Suspense, useCallback, useMemo, useRef } from 'react';
 
 import styles from './expanded-album-list-item.module.css';
 
@@ -18,13 +18,18 @@ import {
 } from '/@/renderer/components/item-list/helpers/item-list-state';
 import { ItemListItem } from '/@/renderer/components/item-list/types';
 import { albumQueries } from '/@/renderer/features/albums/api/album-api';
+import {
+    getPlaysFontWeight,
+    useAlbumTrackPlays,
+} from '/@/renderer/features/albums/hooks/use-album-track-plays';
 import { usePlayer } from '/@/renderer/features/player/context/player-context';
 import { PlayButtonGroup } from '/@/renderer/features/shared/components/play-button-group';
 import { useFastAverageColor } from '/@/renderer/hooks';
 import { useDragDrop } from '/@/renderer/hooks/use-drag-drop';
-import { useSetGlobalExpanded } from '/@/renderer/store';
+import { useSetGlobalExpanded, useShowExternalPlays } from '/@/renderer/store';
 import { ActionIcon } from '/@/shared/components/action-icon/action-icon';
 import { Group } from '/@/shared/components/group/group';
+import { Icon } from '/@/shared/components/icon/icon';
 import { ScrollArea } from '/@/shared/components/scroll-area/scroll-area';
 import { Separator } from '/@/shared/components/separator/separator';
 import { Spinner } from '/@/shared/components/spinner/spinner';
@@ -65,7 +70,11 @@ interface TrackRowProps {
     controls: ReturnType<typeof useDefaultItemListControls>;
     internalState: ItemListStateActions;
     player: ReturnType<typeof usePlayer>;
+    // Shown in place of the duration: undefined while loading, null when unknown.
+    plays?: null | number;
+    playsWeight?: number;
     serverId: string;
+    showPlays: boolean;
     song: NonNullable<AlbumTracksTableProps['songs']>[0];
     songs: Song[];
 }
@@ -87,7 +96,17 @@ const CloseExpandedButton = () => {
     );
 };
 
-const TrackRow = ({ controls, internalState, player, serverId, song, songs }: TrackRowProps) => {
+const TrackRow = ({
+    controls,
+    internalState,
+    player,
+    plays,
+    playsWeight,
+    serverId,
+    showPlays,
+    song,
+    songs,
+}: TrackRowProps) => {
     const rowId = internalState.extractRowId(song);
     const isSelected = useItemSelectionState(internalState, rowId);
     const isDraggingState = useItemDraggingState(internalState, rowId);
@@ -153,6 +172,7 @@ const TrackRow = ({ controls, internalState, player, serverId, song, songs }: Tr
                 [styles.rowSelected]: isSelected,
                 [styles['dragged-over-bottom']]: isDraggedOver === 'bottom',
                 [styles['dragged-over-top']]: isDraggedOver === 'top',
+                [styles['with-plays']]: showPlays,
             })}
             onClick={(e) =>
                 controls.onClick?.({
@@ -166,11 +186,16 @@ const TrackRow = ({ controls, internalState, player, serverId, song, songs }: Tr
             ref={mergedRef}
             size="sm"
         >
-            <span className={styles['track-number']}>
-                {song.discNumber} - {song.trackNumber}
-            </span>
+            <span className={styles['track-number']}>{song.trackNumber}</span>
             <span className={styles['track-name']}>{song.name}</span>
-            <span className={styles['track-duration']}>{formatDuration(song.duration)}</span>
+            {showPlays ? (
+                <span className={styles['track-plays']} style={{ fontWeight: playsWeight }}>
+                    {plays === undefined ? '...' : (plays?.toLocaleString() ?? '-')}
+                    <Icon icon="mediaPlay" size="xs" />
+                </span>
+            ) : (
+                <span className={styles['track-duration']}>{formatDuration(song.duration)}</span>
+            )}
         </Text>
     );
 };
@@ -193,18 +218,27 @@ const AlbumTracksTable = ({ isDark, serverId, songs }: AlbumTracksTableProps) =>
     const player = usePlayer();
 
     const fullSongs = songs as Song[] | undefined;
+    const showPlays = useShowExternalPlays();
+    const songsWithPlays = useAlbumTrackPlays(useMemo(() => fullSongs ?? [], [fullSongs]));
+    const allPlays = songsWithPlays.map((song) => song.externalPlays);
 
     return (
         <div className={clsx(styles.tracks, { [styles.dark]: isDark })}>
             <ScrollArea>
                 <div className={styles['tracks-list']}>
-                    {songs?.map((song) => (
+                    {songs?.map((song, index) => (
                         <TrackRow
                             controls={controls}
                             internalState={internalState}
                             key={song.id}
                             player={player}
+                            plays={songsWithPlays[index]?.externalPlays}
+                            playsWeight={getPlaysFontWeight(
+                                songsWithPlays[index]?.externalPlays,
+                                allPlays,
+                            )}
                             serverId={serverId}
+                            showPlays={showPlays}
                             song={song}
                             songs={fullSongs || []}
                         />

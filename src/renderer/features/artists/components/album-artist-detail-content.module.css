@@ -70,10 +70,6 @@
     height: 100%;
 }
 
-.album-grid-item-unavailable {
-    opacity: 0.2 !important;
-}
-
 .external-album-track-count {
     position: absolute;
     top: var(--theme-spacing-md);
@@ -99,20 +95,32 @@
     position: absolute;
     inset: 0 0 auto;
     z-index: 3;
-    display: none;
+    display: flex;
     align-items: center;
     justify-content: center;
     aspect-ratio: 1 / 1;
+    pointer-events: none;
 
     /* Sits above the card, which would otherwise lose its hover state when the pointer is on
-       the button. The tint stands in for the card's own (dimmed) hover overlay. */
-    background-color: rgb(0 0 0 / 15%);
+       the button. The tint matches the card's own hover overlay and fades in the same way. */
+    background-color: rgb(0 0 0 / 0%);
     border-radius: var(--theme-radius-md);
+    opacity: 0;
+    transition: all 0.2s ease-in-out;
 }
 
 .album-grid-item:hover .external-album-download,
 .external-album-download[data-downloading='true'] {
-    display: flex;
+    pointer-events: auto;
+    opacity: 1;
+
+    @mixin dark {
+        background-color: rgb(0 0 0 / 70%);
+    }
+
+    @mixin light {
+        background-color: rgb(0 0 0 / 50%);
+    }
 }
 
 /* Doubled selector to outrank the ActionIcon `[data-variant='filled']` theme colours. */

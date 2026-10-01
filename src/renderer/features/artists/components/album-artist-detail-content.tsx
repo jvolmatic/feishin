@@ -1422,8 +1422,6 @@ export const getItemsPerRow = (cq: ReturnType<typeof useContainerQuery>) => {
 interface AlbumGridItemProps {
     album: Album;
     controls: ItemControls;
-    // Fades an external album so it reads as not in the library (default).
-    dimExternal?: boolean;
     enableExpansion?: boolean;
     releaseType: string;
     rows: DataRow[] | undefined;
@@ -1432,7 +1430,6 @@ interface AlbumGridItemProps {
 export const AlbumGridItem = memo(function AlbumGridItem({
     album,
     controls,
-    dimExternal = true,
     enableExpansion,
     releaseType,
     rows,
@@ -1455,11 +1452,6 @@ export const AlbumGridItem = memo(function AlbumGridItem({
         );
     };
 
-    const cardWrapperClassName =
-        isExternal && dimExternal
-            ? `${styles.albumGridItemContent} ${styles.albumGridItemUnavailable}`
-            : styles.albumGridItemContent;
-
     return (
         <motion.div
             className={styles.albumGridItem}
@@ -1469,7 +1461,7 @@ export const AlbumGridItem = memo(function AlbumGridItem({
             onClick={handleShowTracks}
             style={isExternal ? { cursor: 'pointer' } : undefined}
         >
-            <div className={cardWrapperClassName}>
+            <div className={styles.albumGridItemContent}>
                 <MemoizedItemCard
                     controls={isExternal ? undefined : controls}
                     data={album}

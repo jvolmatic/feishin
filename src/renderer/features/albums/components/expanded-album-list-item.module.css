@@ -179,7 +179,7 @@
 .track-row {
     position: relative;
     display: grid;
-    grid-template-columns: 55px 1fr 55px;
+    grid-template-columns: 20px 1fr 55px;
     gap: var(--theme-spacing-sm);
     align-items: center;
     padding: var(--theme-spacing-xs) var(--theme-spacing-sm);
@@ -196,6 +196,7 @@
 }
 
 .track-name {
+    padding-right: var(--theme-spacing-lg);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -206,13 +207,16 @@
 }
 
 .track-plays {
+    display: inline-flex;
+    gap: var(--theme-spacing-xs);
+    align-items: center;
+    justify-content: flex-end;
     font-variant-numeric: tabular-nums;
-    text-align: right;
     white-space: nowrap;
 }
 
 .track-row.with-plays {
-    grid-template-columns: 55px 1fr auto;
+    grid-template-columns: 20px 1fr auto;
 }
 
 .row-selected {

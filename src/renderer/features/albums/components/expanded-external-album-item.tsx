@@ -6,7 +6,10 @@ import { useTranslation } from 'react-i18next';
 
 import styles from './expanded-album-list-item.module.css';
 
-import { useAlbumTrackPlays } from '/@/renderer/features/albums/hooks/use-album-track-plays';
+import {
+    getPlaysFontWeight,
+    useAlbumTrackPlays,
+} from '/@/renderer/features/albums/hooks/use-album-track-plays';
 import artistStyles from '/@/renderer/features/artists/components/album-artist-detail-content.module.css';
 import { useExternalAlbumDownload } from '/@/renderer/features/artists/hooks/use-external-album-download';
 import { searchQueries } from '/@/renderer/features/search/api/search-api';
@@ -14,6 +17,7 @@ import { useFastAverageColor } from '/@/renderer/hooks';
 import { useSetGlobalExpanded, useShowExternalPlays } from '/@/renderer/store';
 import { ActionIcon } from '/@/shared/components/action-icon/action-icon';
 import { Center } from '/@/shared/components/center/center';
+import { Icon } from '/@/shared/components/icon/icon';
 import { ScrollArea } from '/@/shared/components/scroll-area/scroll-area';
 import { Spinner } from '/@/shared/components/spinner/spinner';
 import { TextTitle } from '/@/shared/components/text-title/text-title';
@@ -53,6 +57,7 @@ export const ExpandedExternalAlbumItem = ({ album }: { album: Album }) => {
         [album.albumArtistName, album.name, tracksQuery.data],
     );
     const tracks = useAlbumTrackPlays(songs);
+    const allPlays = tracks.map((track) => track.externalPlays);
 
     if (color.isLoading) {
         return <Spinner container />;
@@ -119,10 +124,19 @@ export const ExpandedExternalAlbumItem = ({ album }: { album: Album }) => {
                                                     {track.title}
                                                 </span>
                                                 {showPlays && (
-                                                    <span className={styles.trackPlays}>
+                                                    <span
+                                                        className={styles.trackPlays}
+                                                        style={{
+                                                            fontWeight: getPlaysFontWeight(
+                                                                plays,
+                                                                allPlays,
+                                                            ),
+                                                        }}
+                                                    >
                                                         {plays === undefined
                                                             ? '...'
                                                             : (plays?.toLocaleString() ?? '-')}
+                                                        <Icon icon="mediaPlay" size="xs" />
                                                     </span>
                                                 )}
                                             </Text>

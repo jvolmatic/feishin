@@ -78,7 +78,6 @@ export const ExternalPopularAlbums = ({ containerQuery }: ExternalPopularAlbumsP
                     <AlbumGridItem
                         album={album}
                         controls={controls}
-                        dimExternal={false}
                         releaseType="external"
                         rows={rows}
                     />
@@ -86,7 +85,8 @@ export const ExternalPopularAlbums = ({ containerQuery }: ExternalPopularAlbumsP
                     <MemoizedItemCard
                         controls={controls}
                         data={album}
-                        enableExpansion={false}
+                        enableDrag
+                        enableExpansion
                         imageFetchPriority="low"
                         itemType={LibraryItem.ALBUM}
                         rows={rows}
