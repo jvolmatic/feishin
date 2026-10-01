@@ -115,8 +115,12 @@ export const AlbumArtistDetailHeader = forwardRef<HTMLDivElement, AlbumArtistDet
             }),
         );
 
-        const albumCount = detailQuery.data?.albumCount;
-        const songCount = detailQuery.data?.songCount;
+        // Derived from the albums list: server artist stats can include featured appearances
+        const ownAlbums = (albumsQuery.data?.items || []).filter((album) =>
+            album.albumArtists?.some((artist) => artist.id === routeId),
+        );
+        const albumCount = ownAlbums.length;
+        const songCount = ownAlbums.reduce((sum, album) => sum + (album.songCount || 0), 0);
         const duration = detailQuery.data?.duration;
         const durationEnabled = duration !== null && duration !== undefined;
 

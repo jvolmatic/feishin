@@ -469,14 +469,9 @@ const normalizeAlbumArtist = (
     let songCount: number;
 
     if (item.stats) {
-        albumCount = Math.max(
-            item.stats.albumartist?.albumCount ?? 0,
-            item.stats.artist?.albumCount ?? 0,
-        );
-        songCount = Math.max(
-            item.stats.albumartist?.songCount ?? 0,
-            item.stats.artist?.songCount ?? 0,
-        );
+        // Only the album artist role: the "artist" role also counts featured appearances
+        albumCount = item.stats.albumartist?.albumCount ?? 0;
+        songCount = item.stats.albumartist?.songCount ?? 0;
     } else {
         albumCount = item.albumCount;
         songCount = item.songCount;

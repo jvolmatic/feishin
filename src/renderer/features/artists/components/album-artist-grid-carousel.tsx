@@ -39,7 +39,7 @@ export function AlbumArtistGridCarousel(props: AlbumArtistGridCarouselProps) {
                     itemType={LibraryItem.ALBUM_ARTIST}
                     rows={rows}
                     type="poster"
-                    withControls={!isExternalAlbum(albumArtist)}
+                    withControls={!isExternalAlbum(albumArtist) && albumArtist.albumCount !== 0}
                 />
             ),
             id: albumArtist.id,
