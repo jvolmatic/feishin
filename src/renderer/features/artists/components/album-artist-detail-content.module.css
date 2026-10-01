@@ -125,8 +125,11 @@
 
 /* Doubled selector to outrank the ActionIcon `[data-variant='filled']` theme colours. */
 .external-album-download-button.external-album-download-button[data-variant] {
+    flex-shrink: 0;
     width: 3rem;
+    min-width: 3rem;
     height: 3rem;
+    min-height: 3rem;
     color: rgb(0 0 0);
     background: rgb(255 255 255);
     border-radius: 50%;

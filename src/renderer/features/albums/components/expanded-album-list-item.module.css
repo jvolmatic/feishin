@@ -119,6 +119,10 @@
     opacity: 1;
 }
 
+.download-missing {
+    margin-left: var(--theme-spacing-xl);
+}
+
 .background-image {
     position: absolute;
     right: 0;
@@ -189,6 +193,10 @@
 
 .track-row:hover {
     background-color: rgb(0 0 0 / 20%);
+}
+
+.track-row.missing {
+    opacity: 0.5;
 }
 
 .track-number {

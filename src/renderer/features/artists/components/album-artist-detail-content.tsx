@@ -27,7 +27,10 @@ import { ItemControls } from '/@/renderer/components/item-list/types';
 import { albumQueries } from '/@/renderer/features/albums/api/album-api';
 import { artistsQueries } from '/@/renderer/features/artists/api/artists-api';
 import { AlbumArtistGridCarousel } from '/@/renderer/features/artists/components/album-artist-grid-carousel';
-import { useExternalAlbumDownload } from '/@/renderer/features/artists/hooks/use-external-album-download';
+import {
+    albumToDownloadTarget,
+    useExternalAlbumDownload,
+} from '/@/renderer/features/artists/hooks/use-external-album-download';
 import { useRelatedArtists } from '/@/renderer/features/artists/hooks/use-related-artists';
 import { getDownloadPercent } from '/@/renderer/features/artists/store/download.store';
 import { useIsPlayerFetching, usePlayer } from '/@/renderer/features/player/context/player-context';
@@ -1327,7 +1330,9 @@ export const AlbumArtistDetailContent = ({
     // Use a very low order number to ensure they appear first
     const genresOrder = 0;
     const externalLinksOrder = 0.5;
-    const topSongsOrder = 0.75;
+    // CSS `order` only takes integers. Sharing the biography's order keeps DOM order between the
+    // two, and the biography renders first, so top songs land directly after "about".
+    const topSongsOrder = enabledItem.biography ? itemOrder.biography : itemOrder.topSongs;
 
     return (
         <div className={styles.contentContainer}>
@@ -1436,7 +1441,9 @@ export const AlbumGridItem = memo(function AlbumGridItem({
 }: AlbumGridItemProps) {
     const { t } = useTranslation();
     const isExternal = isExternalAlbum(album);
-    const { downloadProgress, handleDownload, isDownloading } = useExternalAlbumDownload(album);
+    const { downloadProgress, handleDownload, isDownloading } = useExternalAlbumDownload(
+        albumToDownloadTarget(album),
+    );
 
     const setGlobalExpanded = useSetGlobalExpanded();
 
@@ -1505,7 +1512,7 @@ export const AlbumGridItem = memo(function AlbumGridItem({
                             className={styles.externalAlbumDownloadButton}
                             icon="download"
                             iconProps={{ size: 'xl' }}
-                            onClick={handleDownload}
+                            onClick={() => handleDownload()}
                             tooltip={{ label: t('download.action') }}
                             variant="filled"
                         />

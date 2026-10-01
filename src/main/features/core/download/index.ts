@@ -14,7 +14,7 @@ import { getMainWindow } from '/@/main/index';
 import log from '/@/main/logger';
 import { DownloadAlbumRequest, DownloadProgress } from '/@/shared/types/download';
 import { isSameAlbum } from '/@/shared/utils/album-title';
-import { isUnwantedTrackTitle } from '/@/shared/utils/track-title';
+import { isUnwantedTrackTitle, normalizeTrackKey } from '/@/shared/utils/track-title';
 
 interface DownloadConfig {
     cookiesBrowser: string;
@@ -495,6 +495,7 @@ const downloadAlbum = async (request: DownloadAlbumRequest) => {
                     '--parse-metadata',
                     '%(track_number,playlist_index|)s:%(track_number)s',
                     ...(request.year ? parse(String(request.year), 'meta_date') : []),
+                    ...(request.items?.length ? ['--playlist-items', request.items.join(',')] : []),
                     '-o',
                     path.join(tmp, '%(playlist_index)03d-%(id)s.%(ext)s'),
                     url,
@@ -530,12 +531,21 @@ const downloadAlbum = async (request: DownloadAlbumRequest) => {
         const names = (await fs.readdir(tmp)).filter((f) => f.endsWith('.m4a')).sort();
         const outputs: string[] = [];
         const usedNames = new Set<string>();
+        const skipTitles = new Set((request.skipTitles ?? []).map(normalizeTrackKey));
+        const onlyTitles = request.onlyTitles?.length
+            ? new Set(request.onlyTitles.map(normalizeTrackKey))
+            : null;
 
         for (const name of names) {
             const file = path.join(tmp, name);
             const title = await ffprobeTag(ffprobe, file, 'title');
 
-            if (isUnwantedTrackTitle(title)) {
+            const normalized = normalizeTrackKey(title);
+            if (
+                isUnwantedTrackTitle(title) ||
+                skipTitles.has(normalized) ||
+                (onlyTitles && !onlyTitles.has(normalized))
+            ) {
                 await fs.rm(file);
                 continue;
             }

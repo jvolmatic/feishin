@@ -13,6 +13,10 @@ A custom version of Feishin, which is originally a rewrite of [Sonixd](https://g
 
 Please refer to the [feishin documentation](https://github.com/jeffvli/feishin) for more general guidance.
 
+## What's so different?
+
+I wanted to have my music fetching, discovery and player all in the same place. You can listen, download, edit metadata and discover new music all in one place.
+
 ## Custom additional features
 
 - [x] View all available artists and their albums
@@ -20,7 +24,8 @@ Please refer to the [feishin documentation](https://github.com/jeffvli/feishin) 
 - [x] Edit metatags on external servers
 - [x] Show world wide play count on albums & tracks
 - [x] Search for artists not in library
-- [x] Playlist manager
+- [x] View trending albums from external sources
+- [ ] Playlist manager
 
 ## Development
 

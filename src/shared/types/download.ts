@@ -4,6 +4,12 @@ export interface DownloadAlbumRequest {
     /** Genres written to every downloaded song. */
     genres?: string[];
     id: string;
+    /** 1-based album track numbers to download. All tracks when omitted. */
+    items?: number[];
+    /** Only tracks with these titles are kept (guards `items` against numbering differences). */
+    onlyTitles?: string[];
+    /** Tracks with these titles are dropped (already in the library). */
+    skipTitles?: string[];
     year?: null | number;
 }
 

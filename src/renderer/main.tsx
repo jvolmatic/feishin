@@ -38,7 +38,13 @@ createRoot(document.getElementById('root')!).render(
                         query.queryKey.includes('lyrics') &&
                         query.queryKey.includes('select');
 
-                    return isSuccess && isLyricsQueryKey;
+                    // Persisted so the home chart survives restarts instead of refetching every launch.
+                    const isPopularAlbumsQueryKey =
+                        query.queryKey.includes('externalPopularAlbums') &&
+                        Array.isArray(query.state.data) &&
+                        query.state.data.length > 0;
+
+                    return isSuccess && (isLyricsQueryKey || isPopularAlbumsQueryKey);
                 },
             },
             hydrateOptions: {

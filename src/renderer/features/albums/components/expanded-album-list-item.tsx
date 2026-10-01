@@ -1,8 +1,9 @@
-import { useSuspenseQuery } from '@tanstack/react-query';
+import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import clsx from 'clsx';
 import formatDuration from 'format-duration';
 import { motion } from 'motion/react';
 import { Fragment, Suspense, useCallback, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import styles from './expanded-album-list-item.module.css';
 
@@ -22,7 +23,10 @@ import {
     getPlaysFontWeight,
     useAlbumTrackPlays,
 } from '/@/renderer/features/albums/hooks/use-album-track-plays';
+import artistStyles from '/@/renderer/features/artists/components/album-artist-detail-content.module.css';
+import { useExternalAlbumDownload } from '/@/renderer/features/artists/hooks/use-external-album-download';
 import { usePlayer } from '/@/renderer/features/player/context/player-context';
+import { searchQueries } from '/@/renderer/features/search/api/search-api';
 import { PlayButtonGroup } from '/@/renderer/features/shared/components/play-button-group';
 import { useFastAverageColor } from '/@/renderer/hooks';
 import { useDragDrop } from '/@/renderer/hooks/use-drag-drop';
@@ -39,6 +43,7 @@ import { useMergedRef } from '/@/shared/hooks/use-merged-ref';
 import { LibraryItem, RelatedArtist, Song } from '/@/shared/types/domain-types';
 import { DragOperation, DragTarget, DragTargetMap } from '/@/shared/types/drag-and-drop';
 import { Play } from '/@/shared/types/types';
+import { normalizeTrackKey } from '/@/shared/utils/track-title';
 
 export interface ExpandedAlbumData {
     _serverId: string;
@@ -55,7 +60,11 @@ export interface ExpandedAlbumListItemProps {
 }
 
 interface AlbumTracksTableProps {
+    albumName: string;
+    artistName: string;
     isDark?: boolean;
+    missingTracks?: MissingTrack[];
+    onDownloadTrack?: (track: MissingTrack) => void;
     serverId: string;
     songs?: Array<{
         discNumber: number;
@@ -64,6 +73,11 @@ interface AlbumTracksTableProps {
         name: string;
         trackNumber: number;
     }>;
+}
+
+interface MissingTrack {
+    number: number;
+    title: string;
 }
 
 interface TrackRowProps {
@@ -200,7 +214,15 @@ const TrackRow = ({
     );
 };
 
-const AlbumTracksTable = ({ isDark, serverId, songs }: AlbumTracksTableProps) => {
+const AlbumTracksTable = ({
+    albumName,
+    artistName,
+    isDark,
+    missingTracks,
+    onDownloadTrack,
+    serverId,
+    songs,
+}: AlbumTracksTableProps) => {
     const getDataFn = useCallback(() => songs || [], [songs]);
 
     const extractRowId = useCallback((item: unknown) => {
@@ -219,7 +241,24 @@ const AlbumTracksTable = ({ isDark, serverId, songs }: AlbumTracksTableProps) =>
 
     const fullSongs = songs as Song[] | undefined;
     const showPlays = useShowExternalPlays();
-    const songsWithPlays = useAlbumTrackPlays(useMemo(() => fullSongs ?? [], [fullSongs]));
+    // Missing tracks go through the same hook as fake songs, after the library ones.
+    const songsWithPlays = useAlbumTrackPlays(
+        useMemo(
+            () => [
+                ...(fullSongs ?? []),
+                ...(missingTracks ?? []).map(
+                    (track) =>
+                        ({
+                            album: albumName,
+                            albumArtistName: artistName,
+                            artistName,
+                            name: track.title,
+                        }) as Song,
+                ),
+            ],
+            [albumName, artistName, fullSongs, missingTracks],
+        ),
+    );
     const allPlays = songsWithPlays.map((song) => song.externalPlays);
 
     return (
@@ -243,6 +282,33 @@ const AlbumTracksTable = ({ isDark, serverId, songs }: AlbumTracksTableProps) =>
                             songs={fullSongs || []}
                         />
                     ))}
+                    {missingTracks?.map((track, index) => {
+                        const plays = songsWithPlays[(songs?.length ?? 0) + index]?.externalPlays;
+                        return (
+                            <Text
+                                className={clsx(styles['track-row'], styles.missing, {
+                                    [styles['with-plays']]: showPlays,
+                                })}
+                                key={`missing-${track.number}`}
+                                onDoubleClick={() => onDownloadTrack?.(track)}
+                                size="sm"
+                            >
+                                <span className={styles['track-number']}>{track.number}</span>
+                                <span className={styles['track-name']}>{track.title}</span>
+                                {showPlays && (
+                                    <span
+                                        className={styles['track-plays']}
+                                        style={{ fontWeight: getPlaysFontWeight(plays, allPlays) }}
+                                    >
+                                        {plays === undefined
+                                            ? '...'
+                                            : (plays?.toLocaleString() ?? '-')}
+                                        <Icon icon="mediaPlay" size="xs" />
+                                    </span>
+                                )}
+                            </Text>
+                        );
+                    })}
                 </div>
             </ScrollArea>
         </div>
@@ -254,7 +320,29 @@ interface ExpandedAlbumListItemContentProps {
 }
 
 const ExpandedAlbumListItemContent = ({ albumData }: ExpandedAlbumListItemContentProps) => {
+    const { t } = useTranslation();
     const player = usePlayer();
+    const artistName = albumData.albumArtists?.[0]?.name ?? '';
+
+    const { downloadProgress, handleDownload, handleDownloadTrack, isDownloading } =
+        useExternalAlbumDownload({
+            album: albumData.name,
+            artist: artistName,
+            artistId: albumData.albumArtists?.[0]?.id,
+            id: albumData.id,
+        });
+
+    const externalTracksQuery = useQuery(
+        searchQueries.externalAlbumTracks(albumData.id, albumData.name, artistName),
+    );
+    const missingTracks = useMemo(() => {
+        const existing = new Set(
+            (albumData.songs ?? []).map((song) => normalizeTrackKey(song.name)),
+        );
+        return (externalTracksQuery.data ?? []).filter(
+            (track) => !existing.has(normalizeTrackKey(track.title)),
+        );
+    }, [albumData.songs, externalTracksQuery.data]);
 
     const imageUrl = useItemImageUrl({
         id: albumData.imageId || undefined,
@@ -326,7 +414,11 @@ const ExpandedAlbumListItemContent = ({ albumData }: ExpandedAlbumListItemConten
                         </Group>
                     </div>
                     <AlbumTracksTable
+                        albumName={albumData.name}
+                        artistName={artistName}
                         isDark={color.isDark}
+                        missingTracks={missingTracks}
+                        onDownloadTrack={handleDownloadTrack}
                         serverId={albumData._serverId}
                         songs={songs ?? undefined}
                     />
@@ -342,6 +434,30 @@ const ExpandedAlbumListItemContent = ({ albumData }: ExpandedAlbumListItemConten
                     {songs && songs.length > 0 && (
                         <div className={styles.playButtonGroup}>
                             <PlayButtonGroup onPlay={handlePlay} />
+                            {isDownloading ? (
+                                <Text size="sm">
+                                    {t(`download.stage_${downloadProgress?.stage}`)}
+                                </Text>
+                            ) : (
+                                missingTracks.length > 0 && (
+                                    <ActionIcon
+                                        className={clsx(
+                                            artistStyles.externalAlbumDownloadButton,
+                                            styles.downloadMissing,
+                                        )}
+                                        icon="download"
+                                        iconProps={{ size: 'xl' }}
+                                        onClick={() =>
+                                            handleDownload({
+                                                items: missingTracks.map((track) => track.number),
+                                                skipTitles: songs.map((song) => song.name),
+                                            })
+                                        }
+                                        tooltip={{ label: t('download.missingAction') }}
+                                        variant="filled"
+                                    />
+                                )
+                            )}
                         </div>
                     )}
                 </div>

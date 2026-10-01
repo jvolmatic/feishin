@@ -71,6 +71,7 @@ interface DownloadTagsModalProps {
     artist?: string;
     initialGenres?: string[];
     onSubmit: (genres: string[]) => void;
+    submitLabel?: string;
 }
 
 /** Asks for the tags to write on every song of an album before its download starts. */
@@ -79,6 +80,7 @@ export const DownloadTagsModal = ({
     artist,
     initialGenres,
     onSubmit,
+    submitLabel,
 }: DownloadTagsModalProps) => {
     const { t } = useTranslation();
     const serverId = useCurrentServerId();
@@ -150,7 +152,7 @@ export const DownloadTagsModal = ({
             )}
             <Group justify="flex-end">
                 <Button onClick={submit} variant="filled">
-                    {t('download.action')}
+                    {submitLabel ?? t('download.action')}
                 </Button>
             </Group>
         </Stack>

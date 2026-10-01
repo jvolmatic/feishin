@@ -1520,6 +1520,8 @@
     },
     "download": {
         "action": "Download album",
+        "missingAction": "Download missing tracks",
+        "trackAction": "Download track",
         "cookiesBrowser": "Cookies from browser",
         "cookiesBrowser_description": "Browser yt-dlp reads YouTube cookies from (e.g. firefox). Ignored if a cookies file is set",
         "cookiesFile": "Cookies file",

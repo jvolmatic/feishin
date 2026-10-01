@@ -20,3 +20,18 @@ export const isUnwantedTrackTitle = (title: string) => {
     const lower = title.toLowerCase();
     return UNWANTED_TRACK_KEYWORDS.some((keyword) => lower.includes(keyword));
 };
+
+/** Lowercased title without diacritics or punctuation, for comparing titles across sources. */
+export const normalizeTitle = (title: string) =>
+    title
+        .normalize('NFKD')
+        .replace(/\p{Diacritic}/gu, '')
+        .replace(/[^\p{L}\p{N}]/gu, '')
+        .toLocaleLowerCase();
+
+const FEATURE_CREDIT = /\s*[([]\s*(?:feat\b|ft\b|featuring\b|with\b)[^)\]]*[)\]]/gi;
+const TRAILING_FEATURE_CREDIT = /\s+(?:feat\.?|ft\.?|featuring)\s.*$/i;
+
+/** Like `normalizeTitle`, but ignores featured artists so "(feat. A & B)" equals "(feat. B & A)". */
+export const normalizeTrackKey = (title: string) =>
+    normalizeTitle(title.replace(FEATURE_CREDIT, '').replace(TRAILING_FEATURE_CREDIT, ''));

@@ -4,15 +4,9 @@ import { useMemo } from 'react';
 import { searchQueries } from '/@/renderer/features/search/api/search-api';
 import { useLastfmApiKey, useShowExternalPlays } from '/@/renderer/store/settings.store';
 import { Song } from '/@/shared/types/domain-types';
+import { normalizeTitle } from '/@/shared/utils/track-title';
 
 export type SongWithExternalPlays = Song & { externalPlays?: null | number };
-
-const normalizeTitle = (title: string) =>
-    title
-        .normalize('NFKD')
-        .replace(/\p{Diacritic}/gu, '')
-        .replace(/[^\p{L}\p{N}]/gu, '')
-        .toLocaleLowerCase();
 
 const fetchLastfmPlays = async (apiKey: string, song: Song): Promise<null | number> => {
     const response = await fetch(

@@ -11,7 +11,10 @@ import {
     useAlbumTrackPlays,
 } from '/@/renderer/features/albums/hooks/use-album-track-plays';
 import artistStyles from '/@/renderer/features/artists/components/album-artist-detail-content.module.css';
-import { useExternalAlbumDownload } from '/@/renderer/features/artists/hooks/use-external-album-download';
+import {
+    albumToDownloadTarget,
+    useExternalAlbumDownload,
+} from '/@/renderer/features/artists/hooks/use-external-album-download';
 import { searchQueries } from '/@/renderer/features/search/api/search-api';
 import { useFastAverageColor } from '/@/renderer/hooks';
 import { useSetGlobalExpanded, useShowExternalPlays } from '/@/renderer/store';
@@ -29,7 +32,8 @@ export const ExpandedExternalAlbumItem = ({ album }: { album: Album }) => {
     const { t } = useTranslation();
     const setGlobalExpanded = useSetGlobalExpanded();
     const showPlays = useShowExternalPlays();
-    const { downloadProgress, handleDownload, isDownloading } = useExternalAlbumDownload(album);
+    const { downloadProgress, handleDownload, handleDownloadTrack, isDownloading } =
+        useExternalAlbumDownload(albumToDownloadTarget(album));
 
     const color = useFastAverageColor({
         algorithm: 'sqrt',
@@ -115,6 +119,7 @@ export const ExpandedExternalAlbumItem = ({ album }: { album: Album }) => {
                                                     [styles.withPlays]: showPlays,
                                                 })}
                                                 key={track.number}
+                                                onDoubleClick={() => handleDownloadTrack(track)}
                                                 size="sm"
                                             >
                                                 <span className={styles.trackNumber}>
@@ -168,7 +173,7 @@ export const ExpandedExternalAlbumItem = ({ album }: { album: Album }) => {
                                 className={artistStyles.externalAlbumDownloadButton}
                                 icon="download"
                                 iconProps={{ size: 'xl' }}
-                                onClick={handleDownload}
+                                onClick={() => handleDownload()}
                                 tooltip={{ label: t('download.action') }}
                                 variant="filled"
                             />
