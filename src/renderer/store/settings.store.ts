@@ -523,6 +523,7 @@ export const GeneralSettingsSchema = z.object({
     artistRadioCount: z.number(),
     artistReleaseTypeItems: z.array(SortableItemSchema(ArtistReleaseTypeItemSchema)),
     autoSave: AutoSaveSchema,
+    autoplayOnStartup: z.boolean(),
     blurExplicitImages: z.boolean(),
     buttonSize: z.number(),
     collections: z.array(CollectionSchema),
@@ -1344,6 +1345,7 @@ const initialState: SettingsState = {
         artistItems,
         artistRadioCount: 20,
         artistReleaseTypeItems,
+        autoplayOnStartup: false,
         autoSave: {
             count: 10,
             enabled: false,
@@ -2933,10 +2935,16 @@ export const useSettingsStore = createWithEqualityFn<SettingsSlice>()(
                     });
                 }
 
+                if (version < 35) {
+                    if (state.general.autoplayOnStartup === undefined) {
+                        state.general.autoplayOnStartup = false;
+                    }
+                }
+
                 return persistedState;
             },
             name: 'store_settings',
-            version: 34,
+            version: 35,
         },
     ),
 );

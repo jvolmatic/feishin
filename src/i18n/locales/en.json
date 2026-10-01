@@ -1213,6 +1213,8 @@
         "replayGainPreamp": "{{ReplayGain}} preamp (db)",
         "sampleRate_description": "Select the output sample rate to be used if the sample frequency selected is different from that of the current media. A value less than 8000 will use the default frequency",
         "sampleRate": "Sample rate",
+        "autoplayOnStartup_description": "Start playing automatically when the application is opened",
+        "autoplayOnStartup": "Autoplay on startup",
         "savePlayQueue_description": "Save the play queue when the application is closed and restore it when the application is opened",
         "savePlayQueue": "Save play queue",
         "scrobble_description": "Scrobble plays to your media server",

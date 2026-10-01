@@ -395,6 +395,25 @@ export const ApplicationSettings = memo(() => {
         {
             control: (
                 <Switch
+                    aria-label={t('setting.autoplayOnStartup')}
+                    checked={settings.autoplayOnStartup}
+                    onChange={(event) => {
+                        setSettings({
+                            general: {
+                                ...settings,
+                                autoplayOnStartup: event.currentTarget.checked,
+                            },
+                        });
+                    }}
+                />
+            ),
+            description: t('setting.autoplayOnStartup', { context: 'description' }),
+            isHidden: !isElectron() || !settings.resume,
+            title: t('setting.autoplayOnStartup'),
+        },
+        {
+            control: (
+                <Switch
                     aria-label={t('setting.confirmQueueChanges')}
                     checked={settings.confirmQueueChanges}
                     onChange={(event) => {

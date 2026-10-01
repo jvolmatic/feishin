@@ -11,6 +11,7 @@ import { MpvPlayer } from '/@/renderer/features/player/audio-player/mpv-player';
 import { WebPlayer } from '/@/renderer/features/player/audio-player/web-player';
 import { SleepTimerHook } from '/@/renderer/features/player/components/sleep-timer-button';
 import { AutoDJHook } from '/@/renderer/features/player/hooks/use-auto-dj';
+import { AutoplayOnStartupHook } from '/@/renderer/features/player/hooks/use-autoplay-on-startup';
 import { AutosaveHook } from '/@/renderer/features/player/hooks/use-autosave';
 import { MediaSessionHook } from '/@/renderer/features/player/hooks/use-media-session';
 import { MPRISHook } from '/@/renderer/features/player/hooks/use-mpris';
@@ -148,6 +149,7 @@ export const AudioPlayers = () => {
             <AutoDJHook />
             <QueueRestoreTimestampHook />
             <InitialTimestampRestoreHook />
+            <AutoplayOnStartupHook />
             <ResumePositionHook />
             <UpdateCurrentSongHook />
             <RadioAudioInstanceHook />

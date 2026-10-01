@@ -1458,7 +1458,12 @@ const AlbumGridItem = memo(function AlbumGridItem({
         : styles.albumGridItemContent;
 
     return (
-        <motion.div className={styles.albumGridItem} layoutId={`${releaseType}-${album.id}`}>
+        <motion.div
+            className={styles.albumGridItem}
+            // External cards never move between sections, and shared-layout animation on a
+            // large, reflowing grid can leave a card stuck invisible, leaving a gap.
+            layoutId={isExternal ? undefined : `${releaseType}-${album.id}`}
+        >
             <div className={cardWrapperClassName}>
                 <MemoizedItemCard
                     controls={isExternal ? undefined : controls}
