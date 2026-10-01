@@ -1425,7 +1425,6 @@ const AlbumGridItem = memo(function AlbumGridItem({
 }: AlbumGridItemProps) {
     const { t } = useTranslation();
     const isExternal = isExternalAlbum(album);
-    const [isHovered, setIsHovered] = useState(false);
     const downloadProgress = useDownloadStore((state) => state.downloads[album.id]?.progress);
     // A failed download stays in the store as history, but the card goes back to idle.
     const isDownloading =
@@ -1454,21 +1453,12 @@ const AlbumGridItem = memo(function AlbumGridItem({
             title: t('download.action'),
         });
 
-    const trackCountClassName = isHovered
-        ? `${styles.externalAlbumTrackCount} ${styles.externalAlbumTrackCountVisible}`
-        : styles.externalAlbumTrackCount;
-
     const cardWrapperClassName = isExternal
         ? `${styles.albumGridItemContent} ${styles.albumGridItemUnavailable}`
         : styles.albumGridItemContent;
 
     return (
-        <motion.div
-            className={styles.albumGridItem}
-            layoutId={`${releaseType}-${album.id}`}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-        >
+        <motion.div className={styles.albumGridItem} layoutId={`${releaseType}-${album.id}`}>
             <div className={cardWrapperClassName}>
                 <MemoizedItemCard
                     controls={isExternal ? undefined : controls}
@@ -1483,12 +1473,12 @@ const AlbumGridItem = memo(function AlbumGridItem({
                 />
             </div>
             {isExternal && album.songCount ? (
-                <div className={trackCountClassName}>
+                <div className={styles.externalAlbumTrackCount}>
                     {t('entity.trackWithCount', { count: album.songCount })}
                 </div>
             ) : null}
-            {isExternal && isElectron() && (isHovered || isDownloading) ? (
-                <div className={styles.externalAlbumDownload}>
+            {isExternal && isElectron() ? (
+                <div className={styles.externalAlbumDownload} data-downloading={isDownloading}>
                     {isDownloading ? (
                         <div className={styles.externalAlbumProgress}>
                             <Text size="sm">

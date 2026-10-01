@@ -90,15 +90,16 @@
     transition: opacity 0.2s ease-in-out;
 }
 
-.external-album-track-count-visible {
+.album-grid-item:hover .external-album-track-count {
     opacity: 1;
 }
 
+/* Hover is CSS-driven: React misses mouseenter when a modal closes under a still pointer. */
 .external-album-download {
     position: absolute;
     inset: 0 0 auto;
     z-index: 3;
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     aspect-ratio: 1 / 1;
@@ -107,6 +108,11 @@
        the button. The tint stands in for the card's own (dimmed) hover overlay. */
     background-color: rgb(0 0 0 / 15%);
     border-radius: var(--theme-radius-md);
+}
+
+.album-grid-item:hover .external-album-download,
+.external-album-download[data-downloading='true'] {
+    display: flex;
 }
 
 /* Doubled selector to outrank the ActionIcon `[data-variant='filled']` theme colours. */
