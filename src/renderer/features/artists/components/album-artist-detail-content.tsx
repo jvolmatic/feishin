@@ -1436,6 +1436,8 @@ const AlbumGridItem = memo(function AlbumGridItem({
         openModal({
             children: (
                 <DownloadTagsModal
+                    album={album.name}
+                    artist={album.albumArtistName}
                     onSubmit={(genres) =>
                         startAlbumDownload(
                             {

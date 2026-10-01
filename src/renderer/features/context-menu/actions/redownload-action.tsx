@@ -22,6 +22,8 @@ export const RedownloadAction = ({ album, disabled }: RedownloadActionProps) => 
         openModal({
             children: (
                 <DownloadTagsModal
+                    album={album.name}
+                    artist={album.albumArtistName}
                     initialGenres={album.genres?.map((g) => g.name)}
                     onSubmit={(genres) =>
                         startAlbumDownload(

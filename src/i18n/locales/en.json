@@ -1505,6 +1505,7 @@
         "busy": "The last metadata changes are still being processed",
         "failed": "Failed to update metadata",
         "genrePlaceholder": "Pick an existing genre or type a new one",
+        "recommendedTags": "Recommended tags",
         "removeGenre": "Remove genre from all songs"
     },
     "download": {
