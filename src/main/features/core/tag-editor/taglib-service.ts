@@ -324,8 +324,18 @@ export async function writeFilesTags(
     return { failedFiles, success: failedFiles.length === 0 };
 }
 
+// ponytail: one edit at a time across all callers (parallel album downloads share one WASM
+// instance and crash the app when edits overlap). Raise only if taglib-wasm becomes re-entrant.
+let genreQueue: Promise<unknown> = Promise.resolve();
+
 /** Applies the genre changes to one local file, preserving genres it already has. */
-export const editGenres = async (
+export const editGenres = (file: string, add: string[], remove: string[], replace = false) => {
+    const run = genreQueue.then(() => editGenresUnqueued(file, add, remove, replace));
+    genreQueue = run.catch(() => undefined);
+    return run;
+};
+
+const editGenresUnqueued = async (
     file: string,
     add: string[],
     remove: string[],

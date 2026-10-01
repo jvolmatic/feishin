@@ -2,10 +2,19 @@ import { ipcMain } from 'electron';
 
 import { getExternalAlbumCover } from './external-album-covers';
 import { getArtistAlbums as getITunesArtistAlbums } from './providers/itunes';
-import { getArtistAlbums as getYouTubeMusicArtistAlbums } from './providers/youtube-music';
+import {
+    getArtistAlbums as getYouTubeMusicArtistAlbums,
+    getArtistDetail as getYouTubeMusicArtistDetail,
+    searchArtists as searchYouTubeMusicArtists,
+} from './providers/youtube-music';
 
 import log from '/@/main/logger';
-import { ExternalArtistAlbumResult, ServerType } from '/@/shared/types/domain-types';
+import {
+    ExternalArtistAlbumResult,
+    ExternalArtistDetail,
+    ExternalArtistSearchResult,
+    ServerType,
+} from '/@/shared/types/domain-types';
 import { normalizeAlbumTitle } from '/@/shared/utils/album-title';
 
 export interface ExternalArtistAlbumsQuery {
@@ -122,6 +131,30 @@ ipcMain.handle(
         } catch (error) {
             log.warn('Failed to fetch external artist albums', error);
             return [];
+        }
+    },
+);
+
+ipcMain.handle(
+    'external-search-artists',
+    async (_event, query: string): Promise<ExternalArtistSearchResult[]> => {
+        try {
+            return await searchYouTubeMusicArtists(query);
+        } catch (error) {
+            log.warn('Failed to search external artists', error);
+            return [];
+        }
+    },
+);
+
+ipcMain.handle(
+    'external-artist-detail',
+    async (_event, name: string): Promise<ExternalArtistDetail | null> => {
+        try {
+            return await getYouTubeMusicArtistDetail(name);
+        } catch (error) {
+            log.warn('Failed to fetch external artist detail', error);
+            return null;
         }
     },
 );

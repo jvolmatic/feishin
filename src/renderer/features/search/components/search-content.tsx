@@ -9,12 +9,14 @@ import {
     AlbumArtistListView,
     OverrideAlbumArtistListQuery,
 } from '/@/renderer/features/artists/components/album-artist-list-content';
+import { ArtistSearchGrid } from '/@/renderer/features/search/components/artist-search-grid';
 import { AnimatedPage } from '/@/renderer/features/shared/components/animated-page';
 import {
     OverrideSongListQuery,
     SongListView,
 } from '/@/renderer/features/songs/components/song-list-content';
 import { useListSettings } from '/@/renderer/store';
+import { useShowExternalArtists } from '/@/renderer/store/settings.store';
 import { Spinner } from '/@/shared/components/spinner/spinner';
 import {
     AlbumArtistListSort,
@@ -86,12 +88,17 @@ const SongSearch = () => {
 const ArtistSearch = () => {
     const { display, grid, itemsPerPage, pagination, table } = useListSettings(ItemListKey.ARTIST);
     const [searchParams] = useSearchParams();
+    const showExternalArtists = useShowExternalArtists();
 
     const albumArtistQuery: OverrideAlbumArtistListQuery = {
         searchTerm: searchParams.get('query') || '',
         sortBy: AlbumArtistListSort.NAME,
         sortOrder: SortOrder.ASC,
     };
+
+    if (showExternalArtists) {
+        return <ArtistSearchGrid searchTerm={albumArtistQuery.searchTerm || ''} />;
+    }
 
     return (
         <AlbumArtistListView

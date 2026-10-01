@@ -1,9 +1,13 @@
 import YTMusic from 'ytmusic-api';
 
+import { getArtistImage as getDeezerArtistImage } from './deezer';
+
 import log from '/@/main/logger';
 import {
     Album,
     ExternalArtistAlbumResult,
+    ExternalArtistDetail,
+    ExternalArtistSearchResult,
     LibraryItem,
     ServerType,
 } from '/@/shared/types/domain-types';
@@ -16,6 +20,19 @@ interface ArtistAlbumsQuery {
     serverId: string;
     serverType: ServerType;
 }
+
+// YouTube Music thumbnails encode their size as `=w60-h60...`; ask for a larger version instead.
+// Cards only need a small one: many 1200px loads at once get the page rate limited (429).
+const upscaleImage = (url?: null | string, size = 400): null | string =>
+    url ? url.replace(/=w\d+-h\d+/, `=w${size}-h${size}`) : null;
+
+// Primary image plus any other source as fallbacks, so one failing CDN doesn't blank the artist.
+const withFallbackImages = async (name: string, image: null | string) => {
+    const [imageUrl = null, ...imageFallbackUrls] = [image, await getDeezerArtistImage(name)].filter(
+        (url): url is string => Boolean(url),
+    );
+    return { imageFallbackUrls, imageUrl };
+};
 
 const normalizeName = (name: string) =>
     name
@@ -39,6 +56,121 @@ const mapWithConcurrency = async <T>(
         }
     };
     await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, () => worker()));
+};
+
+export const searchArtists = async (query: string): Promise<ExternalArtistSearchResult[]> => {
+    const client = new YTMusic();
+    await client.initialize();
+
+    const artists = await client.searchArtists(query);
+    return Promise.all(
+        artists.map(async (artist) => ({
+            ...(await withFallbackImages(artist.name, upscaleImage(artist.thumbnails.at(-1)?.url))),
+            name: artist.name,
+        })),
+    );
+};
+
+const fetchJson = async <T>(url: string): Promise<null | T> => {
+    const response = await fetch(url, { headers: { 'User-Agent': 'Feishin' } });
+    return response.ok ? ((await response.json()) as T) : null;
+};
+
+type YtNode = { [key: string]: unknown };
+
+// ytmusic-api reads similar artists from a fixed carousel position, which often holds
+// playlists instead. Pick the carousel whose entries link to artist channels (UC...).
+const findCarousels = (node: unknown, found: YtNode[] = []): YtNode[] => {
+    if (Array.isArray(node)) {
+        node.forEach((child) => findCarousels(child, found));
+    } else if (node && typeof node === 'object') {
+        for (const [key, value] of Object.entries(node)) {
+            if (key === 'musicCarouselShelfRenderer') found.push(value as YtNode);
+            else findCarousels(value, found);
+        }
+    }
+    return found;
+};
+
+const getSimilarArtists = async (
+    client: YTMusic,
+    artistId: string,
+): Promise<ExternalArtistSearchResult[]> => {
+    try {
+        const data = await (
+            client as unknown as {
+                constructRequest: (endpoint: string, body: object) => Promise<unknown>;
+            }
+        ).constructRequest('browse', { browseId: artistId });
+
+        for (const carousel of findCarousels(data)) {
+            const items = ((carousel.contents as YtNode[]) || [])
+                .map((item) => item.musicTwoRowItemRenderer as undefined | YtNode)
+                .filter((item): item is YtNode => Boolean(item));
+            const artists = items.flatMap((item): Array<[string, null | string]> => {
+                const endpoint = (item.navigationEndpoint as undefined | YtNode)?.browseEndpoint as
+                    | undefined
+                    | YtNode;
+                const title = (item.title as { runs?: Array<{ text: string }> })?.runs?.[0]?.text;
+                const thumbs = (
+                    item.thumbnailRenderer as {
+                        musicThumbnailRenderer?: {
+                            thumbnail?: { thumbnails?: Array<{ url: string }> };
+                        };
+                    }
+                )?.musicThumbnailRenderer?.thumbnail?.thumbnails;
+                if (!title || !String(endpoint?.browseId).startsWith('UC')) return [];
+                return [[title, upscaleImage(thumbs?.at(-1)?.url)]];
+            });
+            if (artists.length > 0 && artists.length === items.length) {
+                return Promise.all(
+                    artists.map(async ([name, image]) => ({
+                        ...(await withFallbackImages(name, image)),
+                        name,
+                    })),
+                );
+            }
+        }
+    } catch (error) {
+        log.warn('Failed to fetch similar YouTube Music artists', error);
+    }
+    return [];
+};
+
+export const getArtistDetail = async (name: string): Promise<ExternalArtistDetail> => {
+    const client = new YTMusic();
+    await client.initialize();
+
+    const [artist, wikipedia, musicBrainz] = await Promise.all([
+        client
+            .searchArtists(name)
+            .then((results) =>
+                results.find((result) => normalizeName(result.name) === normalizeName(name)),
+            )
+            .then((match) => (match ? client.getArtist(match.artistId) : null))
+            .catch(() => null),
+        fetchJson<{ extract?: string; type?: string }>(
+            `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(name)}`,
+        ).catch(() => null),
+        fetchJson<{ artists?: Array<{ id: string; name: string }> }>(
+            `https://musicbrainz.org/ws/2/artist/?${new URLSearchParams({
+                fmt: 'json',
+                limit: '5',
+                query: `artist:"${name}"`,
+            })}`,
+        ).catch(() => null),
+    ]);
+
+    return {
+        biography: wikipedia?.type === 'standard' ? (wikipedia.extract ?? null) : null,
+        ...(await withFallbackImages(name, upscaleImage(artist?.thumbnails.at(-1)?.url, 1200))),
+        mbzId:
+            musicBrainz?.artists?.find(
+                (result) => normalizeName(result.name) === normalizeName(name),
+            )?.id ?? null,
+        name,
+        similarArtists: artist ? await getSimilarArtists(client, artist.artistId) : [],
+    };
 };
 
 export const getArtistAlbums = async ({

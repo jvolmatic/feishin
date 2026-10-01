@@ -40,6 +40,7 @@ import {
 } from '/@/renderer/components/item-list/helpers/item-list-state';
 import { useListHotkeys } from '/@/renderer/components/item-list/helpers/use-list-hotkeys';
 import { ItemControls, ItemListHandle } from '/@/renderer/components/item-list/types';
+import { isExternalAlbum } from '/@/renderer/utils/external-album';
 import { animationProps } from '/@/shared/components/animations/animation-props';
 import { useElementSize } from '/@/shared/hooks/use-element-size';
 import { useFocusWithin } from '/@/shared/hooks/use-focus-within';
@@ -891,7 +892,7 @@ const ListComponent = memo((props: ListChildComponentProps<GridItemProps>) => {
                         itemType={itemType}
                         rows={rows}
                         type={size === 'compact' ? 'compact' : 'poster'}
-                        withControls
+                        withControls={!isExternalAlbum(item as { id: string })}
                     />
                 </div>,
             );

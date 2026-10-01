@@ -2,9 +2,19 @@ import { ipcRenderer } from 'electron';
 
 import { ExternalArtistAlbumsQuery } from '../main/features/core/external';
 
-import { ExternalArtistAlbumResult } from '/@/shared/types/domain-types';
+import {
+    ExternalArtistAlbumResult,
+    ExternalArtistDetail,
+    ExternalArtistSearchResult,
+} from '/@/shared/types/domain-types';
 
 const getArtistAlbums = (query: ExternalArtistAlbumsQuery): Promise<ExternalArtistAlbumResult[]> =>
     ipcRenderer.invoke('external-artist-albums', query);
 
-export const external = { getArtistAlbums };
+const searchArtists = (query: string): Promise<ExternalArtistSearchResult[]> =>
+    ipcRenderer.invoke('external-search-artists', query);
+
+const getArtistDetail = (name: string): Promise<ExternalArtistDetail | null> =>
+    ipcRenderer.invoke('external-artist-detail', name);
+
+export const external = { getArtistAlbums, getArtistDetail, searchArtists };

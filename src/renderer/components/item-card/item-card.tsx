@@ -20,7 +20,7 @@ import { JoinedArtists } from '/@/renderer/features/albums/components/joined-art
 import { useDragDrop } from '/@/renderer/hooks/use-drag-drop';
 import { AppRoute } from '/@/renderer/router/routes';
 import { useShowFavorites, useShowRatings } from '/@/renderer/store';
-import { isExternalAlbum } from '/@/renderer/utils/external-album';
+import { getAlbumArtistPath, isExternalAlbum } from '/@/renderer/utils/external-album';
 import {
     formatDateAbsolute,
     formatDateRelative,
@@ -1122,12 +1122,7 @@ export const getDataRows = (type?: 'compact' | 'default' | 'poster'): DataRow[] 
                                     return (
                                         <Link
                                             state={{ item: data }}
-                                            to={generatePath(
-                                                AppRoute.LIBRARY_ALBUM_ARTISTS_DETAIL,
-                                                {
-                                                    albumArtistId: data.id,
-                                                },
-                                            )}
+                                            to={getAlbumArtistPath(data.id)}
                                         >
                                             <ExplicitIndicator explicitStatus={explicitStatus} />
                                             {data.name}

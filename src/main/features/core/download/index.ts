@@ -475,6 +475,11 @@ const downloadAlbum = async (request: DownloadAlbumRequest) => {
                     '-f',
                     'ba[ext=m4a]',
                     ...cookieArgs,
+                    // Needed to solve YouTube's "n" challenge; the first runtime found is used.
+                    '--js-runtimes',
+                    'deno',
+                    '--js-runtimes',
+                    'node',
                     '--embed-metadata',
                     '--embed-thumbnail',
                     '--parse-metadata',

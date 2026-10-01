@@ -395,6 +395,25 @@ export const ApplicationSettings = memo(() => {
         {
             control: (
                 <Switch
+                    aria-label={t('setting.showExternalArtists')}
+                    checked={settings.showExternalArtists}
+                    onChange={(event) => {
+                        setSettings({
+                            general: {
+                                ...settings,
+                                showExternalArtists: event.currentTarget.checked,
+                            },
+                        });
+                    }}
+                />
+            ),
+            description: t('setting.showExternalArtists', { context: 'description' }),
+            isHidden: !isElectron(),
+            title: t('setting.showExternalArtists'),
+        },
+        {
+            control: (
+                <Switch
                     aria-label={t('setting.autoplayOnStartup')}
                     checked={settings.autoplayOnStartup}
                     onChange={(event) => {

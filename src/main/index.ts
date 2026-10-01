@@ -1197,6 +1197,16 @@ if (!singleInstance) {
                 });
             });
 
+            // Google's image CDN answers 429 when a request carries both Origin and Referer from
+            // the app, which breaks every external (YouTube Music) artist image.
+            session.defaultSession.webRequest.onBeforeSendHeaders(
+                { urls: ['https://*.googleusercontent.com/*', 'https://*.ggpht.com/*'] },
+                (details, callback) => {
+                    const { Origin, Referer, ...requestHeaders } = details.requestHeaders;
+                    callback({ requestHeaders });
+                },
+            );
+
             session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
                 callback({
                     responseHeaders: {

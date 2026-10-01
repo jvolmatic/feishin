@@ -522,8 +522,8 @@ export const GeneralSettingsSchema = z.object({
     artistItems: z.array(SortableItemSchema(ArtistItemSchema)),
     artistRadioCount: z.number(),
     artistReleaseTypeItems: z.array(SortableItemSchema(ArtistReleaseTypeItemSchema)),
-    autoSave: AutoSaveSchema,
     autoplayOnStartup: z.boolean(),
+    autoSave: AutoSaveSchema,
     blurExplicitImages: z.boolean(),
     buttonSize: z.number(),
     collections: z.array(CollectionSchema),
@@ -568,6 +568,7 @@ export const GeneralSettingsSchema = z.object({
     qobuz: z.boolean(),
     resume: z.boolean(),
     shareExpiration: ShareExpirationSchema,
+    showExternalArtists: z.boolean(),
     showFavorites: z.boolean(),
     showLyricsInSidebar: z.boolean(),
     showQueueInSidebar: z.boolean(),
@@ -1406,6 +1407,7 @@ const initialState: SettingsState = {
             unit: ShareExpirationUnit.YEAR,
             useServerDefault: false,
         },
+        showExternalArtists: false,
         showFavorites: true,
         showLyricsInSidebar: true,
         showQueueInSidebar: true,
@@ -2941,10 +2943,16 @@ export const useSettingsStore = createWithEqualityFn<SettingsSlice>()(
                     }
                 }
 
+                if (version < 36) {
+                    if (state.general.showExternalArtists === undefined) {
+                        state.general.showExternalArtists = false;
+                    }
+                }
+
                 return persistedState;
             },
             name: 'store_settings',
-            version: 35,
+            version: 36,
         },
     ),
 );
@@ -3145,6 +3153,9 @@ export const useSidebarCollapsedNavigation = () =>
 
 export const usePlayerbarOpenDrawer = () =>
     useSettingsStore((state) => state.general.playerbarOpenDrawer, shallow);
+
+export const useShowExternalArtists = () =>
+    useSettingsStore((state) => state.general.showExternalArtists, shallow);
 
 export const useShowRatings = () => useSettingsStore((state) => state.general.showRatings, shallow);
 

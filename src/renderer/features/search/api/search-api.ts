@@ -1,4 +1,5 @@
 import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query';
+import isElectron from 'is-electron';
 
 import { api } from '/@/renderer/api';
 import { queryKeys } from '/@/renderer/api/query-keys';
@@ -8,6 +9,22 @@ import { SearchQuery, SearchResponse } from '/@/shared/types/domain-types';
 const SEARCH_PAGE_SIZE = 4;
 
 export const searchQueries = {
+    externalArtistDetail: (name: string) => {
+        return queryOptions({
+            enabled: isElectron() && Boolean(name),
+            queryFn: () => window.api.external.getArtistDetail(name),
+            queryKey: ['search', 'externalArtistDetail', name] as const,
+            staleTime: 1000 * 60 * 60,
+        });
+    },
+    externalArtists: (searchTerm: string) => {
+        return queryOptions({
+            enabled: isElectron() && searchTerm.length >= 2,
+            queryFn: () => window.api.external.searchArtists(searchTerm),
+            queryKey: queryKeys.search.externalArtists(searchTerm),
+            staleTime: 1000 * 60 * 10,
+        });
+    },
     search: (args: QueryHookArgs<SearchQuery>) => {
         return queryOptions({
             queryFn: ({ signal }) => {

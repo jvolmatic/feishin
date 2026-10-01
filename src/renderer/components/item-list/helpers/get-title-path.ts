@@ -1,6 +1,7 @@
 import { generatePath } from 'react-router';
 
 import { AppRoute } from '/@/renderer/router/routes';
+import { getAlbumArtistPath } from '/@/renderer/utils/external-album';
 import { LibraryItem } from '/@/shared/types/domain-types';
 
 export const getTitlePath = (itemType: LibraryItem, id: string) => {
@@ -8,7 +9,7 @@ export const getTitlePath = (itemType: LibraryItem, id: string) => {
         case LibraryItem.ALBUM:
             return generatePath(AppRoute.LIBRARY_ALBUMS_DETAIL, { albumId: id });
         case LibraryItem.ALBUM_ARTIST:
-            return generatePath(AppRoute.LIBRARY_ALBUM_ARTISTS_DETAIL, { albumArtistId: id });
+            return getAlbumArtistPath(id);
         case LibraryItem.ARTIST:
             return generatePath(AppRoute.LIBRARY_ARTISTS_DETAIL, { artistId: id });
         case LibraryItem.GENRE:

@@ -26,6 +26,7 @@ import { ItemControls } from '/@/renderer/components/item-list/types';
 import { albumQueries } from '/@/renderer/features/albums/api/album-api';
 import { artistsQueries } from '/@/renderer/features/artists/api/artists-api';
 import { AlbumArtistGridCarousel } from '/@/renderer/features/artists/components/album-artist-grid-carousel';
+import { useRelatedArtists } from '/@/renderer/features/artists/hooks/use-related-artists';
 import {
     getDownloadPercent,
     startAlbumDownload,
@@ -1027,7 +1028,7 @@ const getQobuzUrl = (artistName?: string) => {
     return null;
 };
 
-const AlbumArtistMetadataExternalLinks = ({
+export const AlbumArtistMetadataExternalLinks = ({
     artistName,
     externalLinks,
     lastFM,
@@ -1216,16 +1217,28 @@ const AlbumArtistMetadataSimilarArtists = ({
         [t],
     );
 
-    if (!artistInfoQuery.isLoading && similarArtists.length === 0) {
+    const detailQuery = useQuery({
+        ...artistsQueries.albumArtistDetail({ query: { id: routeId }, serverId: server?.id }),
+        enabled: Boolean(server?.id && routeId),
+    });
+    const { artists: allSimilarArtists, isLoading: isExternalLoading } = useRelatedArtists(
+        detailQuery.data?.name || '',
+        similarArtists,
+    );
+
+    if (!artistInfoQuery.isLoading && !isExternalLoading && allSimilarArtists.length === 0) {
         return null;
     }
 
     return (
         <Grid.Col order={order} span={12}>
             <AlbumArtistGridCarousel
-                data={similarArtists}
+                data={allSimilarArtists}
                 excludeIds={[routeId]}
-                isLoading={artistInfoQuery.isLoading}
+                isLoading={
+                    artistInfoQuery.isLoading ||
+                    (isExternalLoading && allSimilarArtists.length === 0)
+                }
                 rowCount={1}
                 title={carouselTitle}
             />
@@ -1396,7 +1409,7 @@ interface AlbumSectionProps {
 
 const MAX_SECTION_CARDS = 100;
 
-const getItemsPerRow = (cq: ReturnType<typeof useContainerQuery>) => {
+export const getItemsPerRow = (cq: ReturnType<typeof useContainerQuery>) => {
     // Match grid carousel breakpoints: is3xl: 8, is2xl: 7, isXl: 6, isLg: 5, isMd: 4, isSm: 3, default: 2
     if (cq.is3xl) return 8;
     if (cq.is2xl) return 7;
@@ -1521,7 +1534,7 @@ const AlbumGridItem = memo(function AlbumGridItem({
     );
 });
 
-const AlbumSection = memo(function AlbumSection({
+export const AlbumSection = memo(function AlbumSection({
     albums,
     controls,
     enableExpansion,

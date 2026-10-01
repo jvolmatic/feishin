@@ -236,6 +236,7 @@ export type AlbumArtist = {
     duration: null | number;
     genres: Genre[];
     id: string;
+    imageFallbackUrls?: string[];
     imageId: null | string;
     imageUrl: null | string;
     lastPlayedAt: null | string;
@@ -286,6 +287,21 @@ export type EndpointDetails = {
 export type ExternalArtistAlbumResult = {
     album: Album;
     popularity: null | number;
+};
+
+export type ExternalArtistDetail = {
+    biography: null | string;
+    imageFallbackUrls?: string[];
+    imageUrl: null | string;
+    mbzId: null | string;
+    name: string;
+    similarArtists: ExternalArtistSearchResult[];
+};
+
+export type ExternalArtistSearchResult = {
+    imageFallbackUrls?: string[];
+    imageUrl: null | string;
+    name: string;
 };
 
 export type Folder = {

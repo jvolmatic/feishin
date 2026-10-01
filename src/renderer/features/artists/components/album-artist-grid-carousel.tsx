@@ -7,6 +7,7 @@ import {
 import { MemoizedItemCard } from '/@/renderer/components/item-card/item-card';
 import { useDefaultItemListControls } from '/@/renderer/components/item-list/helpers/item-list-controls';
 import { useGridRows } from '/@/renderer/components/item-list/helpers/use-grid-rows';
+import { isExternalAlbum } from '/@/renderer/utils/external-album';
 import { AlbumArtist, LibraryItem } from '/@/shared/types/domain-types';
 import { ItemListKey } from '/@/shared/types/types';
 
@@ -33,12 +34,12 @@ export function AlbumArtistGridCarousel(props: AlbumArtistGridCarouselProps) {
                 <MemoizedItemCard
                     controls={controls}
                     data={albumArtist}
-                    enableDrag
+                    enableDrag={!isExternalAlbum(albumArtist)}
                     isRound
                     itemType={LibraryItem.ALBUM_ARTIST}
                     rows={rows}
                     type="poster"
-                    withControls
+                    withControls={!isExternalAlbum(albumArtist)}
                 />
             ),
             id: albumArtist.id,

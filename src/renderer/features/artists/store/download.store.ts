@@ -1,13 +1,15 @@
+import { generatePath } from 'react-router';
 import { createWithEqualityFn } from 'zustand/traditional';
 
 import i18n from '/@/i18n/i18n';
 import { api } from '/@/renderer/api';
 import { invalidateLibraryQueriesAfterScan } from '/@/renderer/features/shared/hooks/use-scan-status';
 import { queryClient } from '/@/renderer/lib/react-query';
+import { AppRoute } from '/@/renderer/router/routes';
 import { useAuthStore } from '/@/renderer/store/auth.store';
 import { logger } from '/@/renderer/utils/logger';
 import { toast } from '/@/shared/components/toast/toast';
-import { SongListSort, SortOrder } from '/@/shared/types/domain-types';
+import { AlbumArtistListSort, SongListSort, SortOrder } from '/@/shared/types/domain-types';
 import { DownloadAlbumRequest, DownloadProgress } from '/@/shared/types/download';
 
 interface DownloadEntry {
@@ -82,7 +84,7 @@ export const scanLibraryAndRefresh = async ({
 
     // Navidrome scans a single folder with `target` = "<libraryId>:<folder>". The library id is
     // the song's, or the server's only library; if it is ambiguous, scan everything instead.
-    let target: string | undefined;
+    let targets: (string | undefined)[] = [undefined];
     if (canScan && folder) {
         let id = libraryId ?? undefined;
         // A song by the same album artist tells us which library the artist lives in.
@@ -110,21 +112,27 @@ export const scanLibraryAndRefresh = async ({
                     query: null,
                 });
                 if (folders?.items.length === 1) id = Number(folders.items[0].id);
+                // Still ambiguous: scan the folder in each library (a missing folder is a no-op).
+                else if (folders?.items.length) {
+                    targets = folders.items.map((f) => `${f.id}:${folder}`);
+                }
             } catch (error) {
                 logger.warn('Failed to list libraries for targeted scan', { error });
             }
         }
-        if (id !== undefined && !Number.isNaN(id)) target = `${id}:${folder}`;
+        if (id !== undefined && !Number.isNaN(id)) targets = [`${id}:${folder}`];
     }
 
     if (canScan) {
-        try {
-            await api.controller.startLibraryScan({
-                apiClientProps: { serverId },
-                query: { fullScan, target },
-            });
-        } catch (error) {
-            logger.warn('Failed to start library scan', { error });
+        for (const target of targets) {
+            try {
+                await api.controller.startLibraryScan({
+                    apiClientProps: { serverId },
+                    query: { fullScan, target },
+                });
+            } catch (error) {
+                logger.warn('Failed to start library scan', { error, target });
+            }
         }
     }
 
@@ -141,6 +149,45 @@ export const scanLibraryAndRefresh = async ({
     }
 
     await invalidateLibraryQueriesAfterScan(queryClient, serverId);
+};
+
+/**
+ * An album downloaded from an external (not yet in the library) artist page creates that artist
+ * on the server. If the user is still on that page, swap it for the new artist page.
+ */
+const openNewArtist = async (name: string) => {
+    const serverId = useAuthStore.getState().currentServer?.id;
+    if (!serverId) return;
+
+    const externalPath = generatePath(AppRoute.LIBRARY_EXTERNAL_ARTISTS_DETAIL, {
+        artistName: name,
+    });
+    const isOnExternalPage = () =>
+        decodeURIComponent(window.location.hash.slice(1)) === decodeURIComponent(externalPath);
+    if (!isOnExternalPage()) return;
+
+    try {
+        const { items } = await api.controller.getAlbumArtistList({
+            apiClientProps: { serverId },
+            query: {
+                limit: 10,
+                searchTerm: name,
+                sortBy: AlbumArtistListSort.NAME,
+                sortOrder: SortOrder.ASC,
+                startIndex: 0,
+            },
+        });
+        const normalize = (value: string) =>
+            value.toLocaleLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+        const artist = items.find((item) => normalize(item.name) === normalize(name));
+        if (artist && isOnExternalPage()) {
+            window.location.hash = generatePath(AppRoute.LIBRARY_ALBUM_ARTISTS_DETAIL, {
+                albumArtistId: artist.id,
+            });
+        }
+    } catch (error) {
+        logger.warn('Failed to open the new artist page', { error });
+    }
 };
 
 // Finished downloads waiting for the scan that runs once every download has ended.
@@ -168,6 +215,7 @@ const flushPendingScans = async () => {
     );
 
     for (const { entry, id, skipped } of batch) {
+        if (entry?.artistId?.startsWith('external:')) void openNewArtist(entry.artistName);
         // Kept so the sidebar can show the warning until dismissed.
         setEntry(
             id,

@@ -38,6 +38,7 @@ interface LibraryHeaderProps {
     children?: ReactNode;
     compact?: boolean;
     containerClassName?: string;
+    imageFallbackUrls?: string[];
     imageOverlay?: ReactNode;
     imagePlaceholderUrl?: null | string;
     imageUrl?: null | string;
@@ -64,6 +65,7 @@ export const LibraryHeader = forwardRef(
             children,
             compact,
             containerClassName,
+            imageFallbackUrls,
             imageOverlay,
             imageUrl,
             item,
@@ -97,16 +99,20 @@ export const LibraryHeader = forwardRef(
             const imageId = item.imageId;
             const itemType = item.type as LibraryItem;
 
-            if (!imageId || !itemType) {
+            const directImageUrl = item.imageUrl || imageUrl;
+
+            if ((!imageId && !directImageUrl) || !itemType) {
                 return;
             }
 
-            const imageUrl = getItemImageUrl({
-                id: imageId,
-                itemType,
-            });
+            const fullImageUrl = imageId
+                ? getItemImageUrl({
+                      id: imageId,
+                      itemType,
+                  })
+                : directImageUrl;
 
-            if (!imageUrl) {
+            if (!fullImageUrl) {
                 console.error('No image URL found');
                 return;
             }
@@ -130,7 +136,7 @@ export const LibraryHeader = forwardRef(
                                 blurExplicitImages &&
                                 item.explicitStatus === ExplicitStatus.EXPLICIT
                             }
-                            src={imageUrl}
+                            src={fullImageUrl}
                             style={{
                                 maxHeight: '100%',
                                 maxWidth: '100%',
@@ -142,7 +148,14 @@ export const LibraryHeader = forwardRef(
                 ),
                 fullScreen: true,
             });
-        }, [blurExplicitImages, item.explicitStatus, item.imageId, item.type]);
+        }, [
+            blurExplicitImages,
+            imageUrl,
+            item.explicitStatus,
+            item.imageId,
+            item.imageUrl,
+            item.type,
+        ]);
 
         const imageSectionSharedProps = {
             onClick: () => {
@@ -183,6 +196,7 @@ export const LibraryHeader = forwardRef(
                             explicitStatus={item.explicitStatus ?? null}
                             fetchPriority="high"
                             id={item.imageId}
+                            imageFallbackUrls={imageFallbackUrls}
                             itemType={item.type as LibraryItem}
                             src={imageUrl || ''}
                             thumbHash={item.thumbHash}
@@ -211,6 +225,7 @@ export const LibraryHeader = forwardRef(
                             explicitStatus={item.explicitStatus ?? null}
                             fetchPriority="high"
                             id={item.imageId}
+                            imageFallbackUrls={imageFallbackUrls}
                             itemType={item.type as LibraryItem}
                             src={imageUrl || ''}
                             thumbHash={item.thumbHash}
