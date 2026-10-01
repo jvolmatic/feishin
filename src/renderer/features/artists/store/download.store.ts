@@ -143,11 +143,51 @@ export const scanLibraryAndRefresh = async ({
     await invalidateLibraryQueriesAfterScan(queryClient, serverId);
 };
 
+// Finished downloads waiting for the scan that runs once every download has ended.
+const pendingScans: {
+    entry: DownloadEntry | undefined;
+    folder?: string;
+    id: string;
+    skipped: number;
+}[] = [];
+
+const ENDED_STAGES: DownloadProgress['stage'][] = ['done', 'error', 'scanning'];
+
+/**
+ * Scans once no download is still running (failed ones do not block). A lone download gets a
+ * scan of just its folder; several get a single quick scan instead of one scan each.
+ */
+const flushPendingScans = async () => {
+    const downloads = Object.values(useDownloadStore.getState().downloads);
+    if (downloads.some(({ progress }) => !ENDED_STAGES.includes(progress.stage))) return;
+    if (pendingScans.length === 0) return;
+
+    const batch = pendingScans.splice(0);
+    await scanLibraryAndRefresh(
+        batch.length === 1 ? { artistId: batch[0].entry?.artistId, folder: batch[0].folder } : {},
+    );
+
+    for (const { entry, id, skipped } of batch) {
+        // Kept so the sidebar can show the warning until dismissed.
+        setEntry(
+            id,
+            skipped > 0
+                ? {
+                      albumName: entry?.albumName ?? '',
+                      artistId: entry?.artistId,
+                      artistName: entry?.artistName ?? '',
+                      progress: { id, skipped, stage: 'done' },
+                  }
+                : null,
+        );
+    }
+};
+
 /**
  * After a download finishes: keep the entry in a "scanning" state (so the album card shows a
- * loader), then scan. That moves the album from "available albums" into "albums".
+ * loader) until the scan has run. That moves the album from "available albums" into "albums".
  */
-const refreshLibraryAfterDownload = async (
+const queueScanAfterDownload = (
     id: string,
     entry: DownloadEntry | undefined,
     folder?: string,
@@ -165,19 +205,8 @@ const refreshLibraryAfterDownload = async (
         progress: { id, stage: 'scanning' },
     });
 
-    await scanLibraryAndRefresh({ artistId: entry?.artistId, folder });
-    // Kept so the sidebar can show the warning until dismissed.
-    setEntry(
-        id,
-        skipped > 0
-            ? {
-                  albumName: entry?.albumName ?? '',
-                  artistId: entry?.artistId,
-                  artistName: entry?.artistName ?? '',
-                  progress: { id, skipped, stage: 'done' },
-              }
-            : null,
-    );
+    pendingScans.push({ entry, folder, id, skipped });
+    void flushPendingScans();
 };
 
 export const dismissDownload = (id: string) => setEntry(id, null);
@@ -194,6 +223,7 @@ export const startAlbumDownload = async (request: DownloadAlbumRequest, artistId
         toast.info({ message: i18n.t('download.started', { album: request.album }) as string });
     } else {
         setEntry(request.id, null);
+        void flushPendingScans();
     }
 };
 
@@ -204,7 +234,7 @@ export const initDownloadListener = () =>
         const album = entry?.albumName ?? '';
 
         if (progress.stage === 'done') {
-            void refreshLibraryAfterDownload(progress.id, entry, progress.folder, progress.skipped);
+            queueScanAfterDownload(progress.id, entry, progress.folder, progress.skipped);
             toast.success({ message: i18n.t('download.done', { album }) as string });
         } else if (progress.stage === 'error') {
             // Kept so the sidebar can show failed downloads until dismissed.
@@ -214,6 +244,7 @@ export const initDownloadListener = () =>
                 artistName: entry?.artistName ?? '',
                 progress,
             });
+            void flushPendingScans();
             toast.error({
                 message: progress.error,
                 title: i18n.t('download.error', { album }) as string,

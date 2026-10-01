@@ -216,7 +216,25 @@ export const DownloadSettings = memo(() => {
             title: t('download.cookiesFile'),
         },
         {
-            control: text(state.cookiesBrowser, (cookiesBrowser) => update({ cookiesBrowser })),
+            control: (
+                <Select
+                    aria-label={t('download.cookiesBrowser')}
+                    clearable
+                    data={[
+                        { label: 'Brave', value: 'brave' },
+                        { label: 'Chrome', value: 'chrome' },
+                        { label: 'Chromium', value: 'chromium' },
+                        { label: 'Edge', value: 'edge' },
+                        { label: 'Firefox', value: 'firefox' },
+                        { label: 'Opera', value: 'opera' },
+                        { label: 'Safari', value: 'safari' },
+                        { label: 'Vivaldi', value: 'vivaldi' },
+                        { label: 'Whale', value: 'whale' },
+                    ]}
+                    onChange={(value) => update({ cookiesBrowser: value ?? '' })}
+                    value={state.cookiesBrowser || null}
+                />
+            ),
             description: t('download.cookiesBrowser_description'),
             title: t('download.cookiesBrowser'),
         },
