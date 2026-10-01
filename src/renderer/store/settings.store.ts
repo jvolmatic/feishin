@@ -569,6 +569,7 @@ export const GeneralSettingsSchema = z.object({
     resume: z.boolean(),
     shareExpiration: ShareExpirationSchema,
     showExternalArtists: z.boolean(),
+    showExternalPlays: z.boolean(),
     showFavorites: z.boolean(),
     showLyricsInSidebar: z.boolean(),
     showQueueInSidebar: z.boolean(),
@@ -1408,6 +1409,7 @@ const initialState: SettingsState = {
             useServerDefault: false,
         },
         showExternalArtists: false,
+        showExternalPlays: true,
         showFavorites: true,
         showLyricsInSidebar: true,
         showQueueInSidebar: true,
@@ -1517,6 +1519,7 @@ const initialState: SettingsState = {
                     enabledColumns: [
                         TableColumn.TRACK_NUMBER,
                         TableColumn.TITLE,
+                        TableColumn.EXTERNAL_PLAYS,
                         TableColumn.DURATION,
                         TableColumn.USER_FAVORITE,
                     ],
@@ -2949,10 +2952,59 @@ export const useSettingsStore = createWithEqualityFn<SettingsSlice>()(
                     }
                 }
 
+                if (version < 37) {
+                    if (state.general.showExternalPlays === undefined) {
+                        state.general.showExternalPlays = true;
+                    }
+
+                    const externalPlaysColumn: ItemTableListColumnConfig = {
+                        align: 'center',
+                        autoSize: false,
+                        id: TableColumn.EXTERNAL_PLAYS,
+                        isEnabled: false,
+                        pinned: null,
+                        width: 120,
+                    };
+
+                    const listKeysToUpdate: ItemListKey[] = [
+                        ItemListKey.SONG,
+                        ItemListKey.ALBUM_DETAIL,
+                        ItemListKey.FOLDER,
+                        ItemListKey.PLAYLIST_SONG,
+                        ItemListKey.ALBUM_ARTIST_SONG,
+                        ItemListKey.GENRE_SONG,
+                        ItemListKey.QUEUE_SONG,
+                        ItemListKey.FULL_SCREEN,
+                        ItemListKey.SIDE_QUEUE,
+                    ];
+
+                    listKeysToUpdate.forEach((listKey) => {
+                        const columns = state.lists[listKey]?.table?.columns;
+                        if (
+                            !columns ||
+                            columns.some((col) => col.id === TableColumn.EXTERNAL_PLAYS)
+                        ) {
+                            return;
+                        }
+                        const playCountIndex = columns.findIndex(
+                            (col) => col.id === TableColumn.PLAY_COUNT,
+                        );
+                        const column = {
+                            ...externalPlaysColumn,
+                            isEnabled: listKey === ItemListKey.ALBUM_DETAIL,
+                        };
+                        if (playCountIndex >= 0) {
+                            columns.splice(playCountIndex, 0, column);
+                        } else {
+                            columns.push(column);
+                        }
+                    });
+                }
+
                 return persistedState;
             },
             name: 'store_settings',
-            version: 36,
+            version: 37,
         },
     ),
 );
@@ -3156,6 +3208,9 @@ export const usePlayerbarOpenDrawer = () =>
 
 export const useShowExternalArtists = () =>
     useSettingsStore((state) => state.general.showExternalArtists, shallow);
+
+export const useShowExternalPlays = () =>
+    useSettingsStore((state) => state.general.showExternalPlays, shallow);
 
 export const useShowRatings = () => useSettingsStore((state) => state.general.showRatings, shallow);
 

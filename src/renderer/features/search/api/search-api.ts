@@ -9,6 +9,14 @@ import { SearchQuery, SearchResponse } from '/@/shared/types/domain-types';
 const SEARCH_PAGE_SIZE = 4;
 
 export const searchQueries = {
+    externalAlbumTrackPlays: (artistName: string, albumName: string) => {
+        return queryOptions({
+            enabled: isElectron() && Boolean(artistName && albumName),
+            queryFn: () => window.api.external.getAlbumTrackPlays(artistName, albumName),
+            queryKey: ['search', 'externalAlbumTrackPlays', artistName, albumName] as const,
+            staleTime: 1000 * 60 * 60,
+        });
+    },
     externalArtistDetail: (name: string) => {
         return queryOptions({
             enabled: isElectron() && Boolean(name),

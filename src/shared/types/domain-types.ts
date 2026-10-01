@@ -298,6 +298,8 @@ export type ExternalArtistDetail = {
     similarArtists: ExternalArtistSearchResult[];
 };
 
+export type ExternalAlbumTrackPlays = { plays: number; title: string };
+
 export type ExternalArtistSearchResult = {
     imageFallbackUrls?: string[];
     imageUrl: null | string;

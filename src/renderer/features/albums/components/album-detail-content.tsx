@@ -22,6 +22,7 @@ import { ItemTableListColumn } from '/@/renderer/components/item-list/item-table
 import { ItemControls } from '/@/renderer/components/item-list/types';
 import { albumQueries } from '/@/renderer/features/albums/api/album-api';
 import { AlbumInfiniteCarousel } from '/@/renderer/features/albums/components/album-infinite-carousel';
+import { useAlbumTrackPlays } from '/@/renderer/features/albums/hooks/use-album-track-plays';
 import { usePlayer } from '/@/renderer/features/player/context/player-context';
 import {
     ListConfigMenu,
@@ -39,7 +40,11 @@ import { useMetadataEditStore } from '/@/renderer/features/tag-editor/store/meta
 import { useHotkeys } from '/@/renderer/hooks/use-hotkeys';
 import { AppRoute } from '/@/renderer/router/routes';
 import { useCurrentServer, usePlayerSong } from '/@/renderer/store';
-import { useExternalLinks, useSettingsStore } from '/@/renderer/store/settings.store';
+import {
+    useExternalLinks,
+    useSettingsStore,
+    useShowExternalPlays,
+} from '/@/renderer/store/settings.store';
 import { sentenceCase, titleCase } from '/@/renderer/utils';
 import { replaceURLWithHTMLLinks } from '/@/renderer/utils/linkify';
 import { normalizeReleaseTypes } from '/@/renderer/utils/normalize-release-types';
@@ -68,7 +73,7 @@ import {
     SongListSort,
     SortOrder,
 } from '/@/shared/types/domain-types';
-import { ItemListKey, ListDisplayType } from '/@/shared/types/types';
+import { ItemListKey, ListDisplayType, TableColumn } from '/@/shared/types/types';
 
 const MetadataPillGroup = ({
     items,
@@ -806,6 +811,8 @@ const AlbumDetailSongsTable = ({ songs }: AlbumDetailSongsTableProps) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearchTerm] = useDebouncedValue(searchTerm, 300);
     const tableConfig = useSettingsStore((state) => state.lists[ItemListKey.ALBUM_DETAIL]?.table);
+    const songsWithPlays = useAlbumTrackPlays(songs);
+    const showExternalPlays = useShowExternalPlays();
 
     const currentSong = usePlayerSong();
 
@@ -813,16 +820,19 @@ const AlbumDetailSongsTable = ({ songs }: AlbumDetailSongsTableProps) => {
     const [sortOrder, setSortOrder] = useState<SortOrder>(SortOrder.ASC);
 
     const columns = useMemo(() => {
-        return tableConfig?.columns || [];
-    }, [tableConfig?.columns]);
+        const all = tableConfig?.columns || [];
+        return showExternalPlays
+            ? all
+            : all.filter((column) => column.id !== TableColumn.EXTERNAL_PLAYS);
+    }, [tableConfig?.columns, showExternalPlays]);
 
     const filteredSongs = useMemo(() => {
         return sortSongList(
-            searchLibraryItems(songs, debouncedSearchTerm, LibraryItem.SONG),
+            searchLibraryItems(songsWithPlays, debouncedSearchTerm, LibraryItem.SONG),
             sortBy,
             sortOrder,
         );
-    }, [songs, debouncedSearchTerm, sortBy, sortOrder]);
+    }, [songsWithPlays, debouncedSearchTerm, sortBy, sortOrder]);
 
     const { handleColumnReordered } = useItemListColumnReorder({
         itemListKey: ItemListKey.ALBUM_DETAIL,

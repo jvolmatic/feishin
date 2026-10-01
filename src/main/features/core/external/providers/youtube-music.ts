@@ -5,6 +5,7 @@ import { getArtistImage as getDeezerArtistImage } from './deezer';
 import log from '/@/main/logger';
 import {
     Album,
+    ExternalAlbumTrackPlays,
     ExternalArtistAlbumResult,
     ExternalArtistDetail,
     ExternalArtistSearchResult,
@@ -28,9 +29,10 @@ const upscaleImage = (url?: null | string, size = 400): null | string =>
 
 // Primary image plus any other source as fallbacks, so one failing CDN doesn't blank the artist.
 const withFallbackImages = async (name: string, image: null | string) => {
-    const [imageUrl = null, ...imageFallbackUrls] = [image, await getDeezerArtistImage(name)].filter(
-        (url): url is string => Boolean(url),
-    );
+    const [imageUrl = null, ...imageFallbackUrls] = [
+        image,
+        await getDeezerArtistImage(name),
+    ].filter((url): url is string => Boolean(url));
     return { imageFallbackUrls, imageUrl };
 };
 
@@ -171,6 +173,45 @@ export const getArtistDetail = async (name: string): Promise<ExternalArtistDetai
         name,
         similarArtists: artist ? await getSimilarArtists(client, artist.artistId) : [],
     };
+};
+
+/** View counts per track of an album, read from each track's video details. */
+export const getAlbumTrackPlays = async (
+    artistName: string,
+    albumName: string,
+): Promise<ExternalAlbumTrackPlays[]> => {
+    if (!artistName || !albumName) return [];
+
+    const client = new YTMusic();
+    await client.initialize();
+
+    const match = (await client.searchAlbums(`${artistName} ${albumName}`)).find(
+        (result) =>
+            normalizeName(result.artist.name) === normalizeName(artistName) &&
+            isSameAlbum(result.name, albumName),
+    );
+    if (!match) return [];
+
+    const request = (
+        client as unknown as {
+            constructRequest: (endpoint: string, body: object) => Promise<unknown>;
+        }
+    ).constructRequest;
+
+    const results: ExternalAlbumTrackPlays[] = [];
+    await mapWithConcurrency((await client.getAlbum(match.albumId)).songs, 4, async (song) => {
+        try {
+            const data = (await request.call(client, 'player', { videoId: song.videoId })) as {
+                videoDetails?: { viewCount?: string };
+            };
+            const plays = Number(data.videoDetails?.viewCount);
+            if (Number.isFinite(plays)) results.push({ plays, title: song.name });
+        } catch (error) {
+            log.warn('Failed to fetch YouTube Music track plays', error);
+        }
+    });
+
+    return results;
 };
 
 export const getArtistAlbums = async ({

@@ -3,6 +3,7 @@ import { ipcMain } from 'electron';
 import { getExternalAlbumCover } from './external-album-covers';
 import { getArtistAlbums as getITunesArtistAlbums } from './providers/itunes';
 import {
+    getAlbumTrackPlays as getYouTubeMusicAlbumTrackPlays,
     getArtistAlbums as getYouTubeMusicArtistAlbums,
     getArtistDetail as getYouTubeMusicArtistDetail,
     searchArtists as searchYouTubeMusicArtists,
@@ -10,6 +11,7 @@ import {
 
 import log from '/@/main/logger';
 import {
+    ExternalAlbumTrackPlays,
     ExternalArtistAlbumResult,
     ExternalArtistDetail,
     ExternalArtistSearchResult,
@@ -142,6 +144,18 @@ ipcMain.handle(
             return await searchYouTubeMusicArtists(query);
         } catch (error) {
             log.warn('Failed to search external artists', error);
+            return [];
+        }
+    },
+);
+
+ipcMain.handle(
+    'external-album-track-plays',
+    async (_event, artistName: string, albumName: string): Promise<ExternalAlbumTrackPlays[]> => {
+        try {
+            return await getYouTubeMusicAlbumTrackPlays(artistName, albumName);
+        } catch (error) {
+            log.warn('Failed to fetch external album track plays', error);
             return [];
         }
     },

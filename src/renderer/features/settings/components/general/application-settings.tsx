@@ -414,6 +414,24 @@ export const ApplicationSettings = memo(() => {
         {
             control: (
                 <Switch
+                    aria-label={t('setting.showExternalPlays')}
+                    checked={settings.showExternalPlays}
+                    onChange={(event) => {
+                        setSettings({
+                            general: {
+                                ...settings,
+                                showExternalPlays: event.currentTarget.checked,
+                            },
+                        });
+                    }}
+                />
+            ),
+            description: t('setting.showExternalPlays', { context: 'description' }),
+            title: t('setting.showExternalPlays'),
+        },
+        {
+            control: (
+                <Switch
                     aria-label={t('setting.autoplayOnStartup')}
                     checked={settings.autoplayOnStartup}
                     onChange={(event) => {

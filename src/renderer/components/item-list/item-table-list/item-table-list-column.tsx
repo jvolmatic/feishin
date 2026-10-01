@@ -223,6 +223,7 @@ const ItemTableListColumnBase = (props: ItemTableListColumn) => {
                 );
 
             case TableColumn.ALBUM_COUNT:
+            case TableColumn.EXTERNAL_PLAYS:
             case TableColumn.PLAY_COUNT:
             case TableColumn.SONG_COUNT:
                 return <CountColumn {...props} {...dragProps} controls={controls} type={type} />;
@@ -1296,6 +1297,9 @@ export const columnLabelMap: Record<TableColumn, ReactNode | string> = {
             <Icon icon="duration" />
         </Flex>
     ),
+    [TableColumn.EXTERNAL_PLAYS]: i18n.t('table.column.externalPlays', {
+        postProcess: 'upperCase',
+    }) as string,
     [TableColumn.GENRE]: i18n.t('table.column.genre', { postProcess: 'upperCase' }) as string,
     [TableColumn.GENRE_BADGE]: i18n.t('table.column.genre', {
         postProcess: 'upperCase',

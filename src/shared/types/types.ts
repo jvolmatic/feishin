@@ -183,6 +183,7 @@ export enum TableColumn {
     DATE_ADDED = 'createdAt',
     DISC_NUMBER = 'discNumber',
     DURATION = 'duration',
+    EXTERNAL_PLAYS = 'externalPlays',
     GENRE = 'genres',
     GENRE_BADGE = 'genreBadge',
     ID = 'id',

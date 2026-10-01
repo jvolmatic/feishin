@@ -9,6 +9,8 @@ import {
 } from '/@/renderer/store';
 import { logger } from '/@/renderer/utils/logger';
 
+const AUTOPLAY_DELAY_MS = 1000;
+
 let autoplayOnStartupHandled = false;
 
 export const AutoplayOnStartupHook = () => {
@@ -23,7 +25,8 @@ export const AutoplayOnStartupHook = () => {
 
         if (enabled && currentSong && !isRadioActive) {
             logger.info('Autoplay on startup');
-            usePlayerStore.getState().mediaPlay();
+            // Delay so the audio engines settle; playing immediately can start multiple tracks
+            setTimeout(() => usePlayerStore.getState().mediaPlay(), AUTOPLAY_DELAY_MS);
         }
     }, [enabled, hydrated, currentSong, isRadioActive]);
 
