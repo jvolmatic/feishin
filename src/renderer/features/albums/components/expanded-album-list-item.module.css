@@ -205,6 +205,16 @@
     text-align: right;
 }
 
+.track-plays {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.track-row.with-plays {
+    grid-template-columns: 55px 1fr auto;
+}
+
 .row-selected {
     position: relative;
 }

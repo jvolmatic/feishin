@@ -17,6 +17,14 @@ export const searchQueries = {
             staleTime: 1000 * 60 * 60,
         });
     },
+    externalAlbumTracks: (albumId: string, albumName: string, artistName: string) => {
+        return queryOptions({
+            enabled: isElectron() && Boolean(albumId),
+            queryFn: () => window.api.external.getAlbumTracks({ albumId, albumName, artistName }),
+            queryKey: ['search', 'externalAlbumTracks', albumId] as const,
+            staleTime: 1000 * 60 * 60,
+        });
+    },
     externalArtistDetail: (name: string) => {
         return queryOptions({
             enabled: isElectron() && Boolean(name),

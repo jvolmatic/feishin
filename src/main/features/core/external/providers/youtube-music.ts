@@ -5,6 +5,7 @@ import { getArtistImage as getDeezerArtistImage } from './deezer';
 import log from '/@/main/logger';
 import {
     Album,
+    ExternalAlbumTrack,
     ExternalAlbumTrackPlays,
     ExternalArtistAlbumResult,
     ExternalArtistDetail,
@@ -372,4 +373,26 @@ export const getArtistAlbums = async ({
     });
 
     return result;
+};
+
+export const getAlbumTracks = async (
+    artistName: string,
+    albumName: string,
+): Promise<ExternalAlbumTrack[]> => {
+    if (!artistName || !albumName) return [];
+
+    const client = new YTMusic();
+    await client.initialize();
+
+    const match = (await client.searchAlbums(`${artistName} ${albumName}`)).find(
+        (result) =>
+            normalizeName(result.artist.name) === normalizeName(artistName) &&
+            isSameAlbum(result.name, albumName),
+    );
+    if (!match) return [];
+
+    return (await client.getAlbum(match.albumId)).songs.map((song, index) => ({
+        number: index + 1,
+        title: song.name,
+    }));
 };

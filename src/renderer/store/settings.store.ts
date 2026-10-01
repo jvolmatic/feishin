@@ -570,6 +570,7 @@ export const GeneralSettingsSchema = z.object({
     shareExpiration: ShareExpirationSchema,
     showExternalArtists: z.boolean(),
     showExternalPlays: z.boolean(),
+    showExternalPopularAlbums: z.boolean(),
     showFavorites: z.boolean(),
     showLyricsInSidebar: z.boolean(),
     showQueueInSidebar: z.boolean(),
@@ -1410,6 +1411,7 @@ const initialState: SettingsState = {
         },
         showExternalArtists: false,
         showExternalPlays: true,
+        showExternalPopularAlbums: true,
         showFavorites: true,
         showLyricsInSidebar: true,
         showQueueInSidebar: true,
@@ -2952,6 +2954,12 @@ export const useSettingsStore = createWithEqualityFn<SettingsSlice>()(
                     }
                 }
 
+                if (version < 38) {
+                    if (state.general.showExternalPopularAlbums === undefined) {
+                        state.general.showExternalPopularAlbums = true;
+                    }
+                }
+
                 if (version < 37) {
                     if (state.general.showExternalPlays === undefined) {
                         state.general.showExternalPlays = true;
@@ -3004,7 +3012,7 @@ export const useSettingsStore = createWithEqualityFn<SettingsSlice>()(
                 return persistedState;
             },
             name: 'store_settings',
-            version: 37,
+            version: 38,
         },
     ),
 );
@@ -3211,6 +3219,9 @@ export const useShowExternalArtists = () =>
 
 export const useShowExternalPlays = () =>
     useSettingsStore((state) => state.general.showExternalPlays, shallow);
+
+export const useShowExternalPopularAlbums = () =>
+    useSettingsStore((state) => state.general.showExternalPopularAlbums, shallow);
 
 export const useShowRatings = () => useSettingsStore((state) => state.general.showRatings, shallow);
 

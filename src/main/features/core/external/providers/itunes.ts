@@ -1,7 +1,9 @@
 import log from '/@/main/logger';
 import {
     Album,
+    ExternalAlbumTrack,
     ExternalArtistAlbumResult,
+    ExternalPopularAlbum,
     LibraryItem,
     ServerType,
 } from '/@/shared/types/domain-types';
@@ -189,4 +191,88 @@ export const getArtistAlbums = async ({
     });
 
     return result;
+};
+
+interface AppleTopAlbumsFeed {
+    feed?: {
+        results?: Array<{
+            artistName: string;
+            artworkUrl100?: string;
+            id: string;
+            name: string;
+            releaseDate?: string;
+        }>;
+    };
+}
+
+/** Apple Music's "Top Albums" chart (the same one as music.apple.com/new/top-charts/albums). */
+export const getPopularAlbums = async (limit: number): Promise<ExternalPopularAlbum[]> => {
+    const response = await fetch(
+        `https://rss.marketingtools.apple.com/api/v2/us/music/most-played/${limit}/albums.json`,
+    );
+    if (!response.ok) {
+        throw new Error(`Apple top albums failed: ${response.status}`);
+    }
+
+    const feed = (await response.json()) as AppleTopAlbumsFeed;
+
+    const results = (feed.feed?.results || []).filter((album) => !isSingleOrEpTitle(album.name));
+
+    // The chart doesn't include track counts; one batch lookup fills them in (best effort).
+    const trackCounts = new Map<string, number>();
+    try {
+        const lookup = await fetch(
+            `https://itunes.apple.com/lookup?id=${results.map((album) => album.id).join(',')}`,
+        );
+        if (lookup.ok) {
+            const { results: collections = [] } = (await lookup.json()) as {
+                results?: ITunesCollection[];
+            };
+            collections.forEach((collection) =>
+                trackCounts.set(String(collection.collectionId), collection.trackCount || 0),
+            );
+        }
+    } catch (error) {
+        log.warn('Failed to fetch Apple chart track counts', error);
+    }
+
+    return results.map((album) => ({
+        artistName: album.artistName,
+        id: `external:itunes:${album.id}`,
+        imageUrl: album.artworkUrl100?.replace('100x100bb', '600x600bb') || null,
+        name: album.name,
+        releaseDate: album.releaseDate || null,
+        trackCount: trackCounts.get(album.id) ?? 0,
+    }));
+};
+
+export const getAlbumTracks = async (collectionId: string): Promise<ExternalAlbumTrack[]> => {
+    const response = await fetch(`https://itunes.apple.com/lookup?id=${collectionId}&entity=song`);
+    if (!response.ok) {
+        throw new Error(`iTunes album lookup failed: ${response.status}`);
+    }
+
+    const { results = [] } = (await response.json()) as {
+        results?: Array<{
+            discNumber?: number;
+            trackName?: string;
+            trackNumber?: number;
+            wrapperType: string;
+        }>;
+    };
+
+    const tracks = results.filter((result) => result.wrapperType === 'track' && result.trackName);
+    const isMultiDisc = tracks.some((track) => (track.discNumber ?? 1) > 1);
+
+    // Multi-disc albums restart numbering per disc; number them in order across the album.
+    return tracks
+        .sort(
+            (a, b) =>
+                (a.discNumber ?? 1) - (b.discNumber ?? 1) ||
+                (a.trackNumber ?? 0) - (b.trackNumber ?? 0),
+        )
+        .map((track, index) => ({
+            number: isMultiDisc ? index + 1 : (track.trackNumber ?? index + 1),
+            title: track.trackName as string,
+        }));
 };

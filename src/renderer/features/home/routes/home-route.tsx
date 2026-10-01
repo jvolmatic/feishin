@@ -1,4 +1,4 @@
-import { Suspense, useRef } from 'react';
+import { Fragment, Suspense, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useGridCarouselContainerQuery } from '/@/renderer/components/grid-carousel/grid-carousel-v2';
@@ -6,6 +6,7 @@ import { NativeScrollArea } from '/@/renderer/components/native-scroll-area/nati
 import { AlbumInfiniteCarousel } from '/@/renderer/features/albums/components/album-infinite-carousel';
 import { AlbumInfiniteFeatureCarousel } from '/@/renderer/features/home/components/album-infinite-feature-carousel';
 import { AlbumInfiniteSingleFeatureCarousel } from '/@/renderer/features/home/components/album-infinite-single-feature-carousel';
+import { ExternalPopularAlbums } from '/@/renderer/features/home/components/external-popular-albums';
 import { FeaturedGenres } from '/@/renderer/features/home/components/featured-genres';
 import { PlaylistInfiniteCarousel } from '/@/renderer/features/home/components/playlist-infinite-carousel';
 import { AnimatedPage } from '/@/renderer/features/shared/components/animated-page';
@@ -20,6 +21,7 @@ import {
     useHomeFeature,
     useHomeFeatureStyle,
     useHomeItems,
+    useShowExternalPopularAlbums,
     useWindowSettings,
 } from '/@/renderer/store';
 import { Spinner } from '/@/shared/components/spinner/spinner';
@@ -41,6 +43,7 @@ const HomeRoute = () => {
     const homeFeature = useHomeFeature();
     const homeFeatureStyle = useHomeFeatureStyle();
     const homeItems = useHomeItems();
+    const showExternalPopularAlbums = useShowExternalPopularAlbums();
     const containerQuery = useGridCarouselContainerQuery();
 
     const isJellyfin = server?.type === ServerType.JELLYFIN;
@@ -126,7 +129,16 @@ const HomeRoute = () => {
                         )}
                         {sortedItems.map((item) => {
                             if (item.id === HomeItem.GENRES) {
-                                return <FeaturedGenres key="featured-genres" />;
+                                return (
+                                    <Fragment key="featured-genres">
+                                        <FeaturedGenres />
+                                        {showExternalPopularAlbums && (
+                                            <ExternalPopularAlbums
+                                                containerQuery={containerQuery}
+                                            />
+                                        )}
+                                    </Fragment>
+                                );
                             }
 
                             if (item.id === HomeItem.PLAYLISTS) {

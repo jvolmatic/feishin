@@ -432,6 +432,25 @@ export const ApplicationSettings = memo(() => {
         {
             control: (
                 <Switch
+                    aria-label={t('setting.showExternalPopularAlbums')}
+                    checked={settings.showExternalPopularAlbums}
+                    onChange={(event) => {
+                        setSettings({
+                            general: {
+                                ...settings,
+                                showExternalPopularAlbums: event.currentTarget.checked,
+                            },
+                        });
+                    }}
+                />
+            ),
+            description: t('setting.showExternalPopularAlbums', { context: 'description' }),
+            isHidden: !isElectron(),
+            title: t('setting.showExternalPopularAlbums'),
+        },
+        {
+            control: (
+                <Switch
                     aria-label={t('setting.autoplayOnStartup')}
                     checked={settings.autoplayOnStartup}
                     onChange={(event) => {

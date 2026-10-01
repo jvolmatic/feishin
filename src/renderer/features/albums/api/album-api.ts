@@ -55,6 +55,21 @@ export const albumQueries = {
             staleTime: 1000 * 60 * 60 * 24, // 24 hours
         });
     },
+    externalPopular: (args: { serverId?: string; serverType?: ServerType }) => {
+        const serverId = args.serverId || '';
+
+        return queryOptions({
+            enabled: isElectron() && Boolean(serverId),
+            gcTime: 1000 * 60 * 60 * 24,
+            queryFn: () =>
+                window.api.external.getPopularAlbums({
+                    serverId,
+                    serverType: args.serverType || ServerType.JELLYFIN,
+                }),
+            queryKey: queryKeys.search.externalPopularAlbums(serverId),
+            staleTime: 1000 * 60 * 60 * 24,
+        });
+    },
     list: (args: QueryHookArgs<AlbumListQuery>) => {
         return queryOptions({
             queryFn: ({ signal }) => {

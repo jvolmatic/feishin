@@ -15,6 +15,7 @@ import styles from './album-artist-detail-content.module.css';
 import { queryKeys } from '/@/renderer/api/query-keys';
 import { DataRow, MemoizedItemCard } from '/@/renderer/components/item-card/item-card';
 import { useDefaultItemListControls } from '/@/renderer/components/item-list/helpers/item-list-controls';
+import { ItemListStateItem } from '/@/renderer/components/item-list/helpers/item-list-state';
 import { playSongFromItemListControl } from '/@/renderer/components/item-list/helpers/play-row-from-list';
 import { useGridRows } from '/@/renderer/components/item-list/helpers/use-grid-rows';
 import { useItemListColumnReorder } from '/@/renderer/components/item-list/helpers/use-item-list-column-reorder';
@@ -26,12 +27,9 @@ import { ItemControls } from '/@/renderer/components/item-list/types';
 import { albumQueries } from '/@/renderer/features/albums/api/album-api';
 import { artistsQueries } from '/@/renderer/features/artists/api/artists-api';
 import { AlbumArtistGridCarousel } from '/@/renderer/features/artists/components/album-artist-grid-carousel';
+import { useExternalAlbumDownload } from '/@/renderer/features/artists/hooks/use-external-album-download';
 import { useRelatedArtists } from '/@/renderer/features/artists/hooks/use-related-artists';
-import {
-    getDownloadPercent,
-    startAlbumDownload,
-    useDownloadStore,
-} from '/@/renderer/features/artists/store/download.store';
+import { getDownloadPercent } from '/@/renderer/features/artists/store/download.store';
 import { useIsPlayerFetching, usePlayer } from '/@/renderer/features/player/context/player-context';
 import {
     ListConfigMenu,
@@ -50,7 +48,6 @@ import {
 import { usePlayButtonClick } from '/@/renderer/features/shared/hooks/use-play-button-click';
 import { searchLibraryItems } from '/@/renderer/features/shared/utils';
 import { songsQueries } from '/@/renderer/features/songs/api/songs-api';
-import { DownloadTagsModal } from '/@/renderer/features/tag-editor/components/download-tags-modal';
 import { useContainerQuery } from '/@/renderer/hooks';
 import { useGenreRoute } from '/@/renderer/hooks/use-genre-route';
 import { useHotkeys } from '/@/renderer/hooks/use-hotkeys';
@@ -61,6 +58,7 @@ import {
     useCurrentServer,
     useCurrentServerId,
     usePlayerSong,
+    useSetGlobalExpanded,
     useShowFavorites,
     useShowRatings,
 } from '/@/renderer/store';
@@ -81,7 +79,6 @@ import { DropdownMenu } from '/@/shared/components/dropdown-menu/dropdown-menu';
 import { Grid } from '/@/shared/components/grid/grid';
 import { Group } from '/@/shared/components/group/group';
 import { Icon } from '/@/shared/components/icon/icon';
-import { openModal } from '/@/shared/components/modal/modal';
 import { Progress } from '/@/shared/components/progress/progress';
 import { SegmentedControl } from '/@/shared/components/segmented-control/segmented-control';
 import { Skeleton } from '/@/shared/components/skeleton/skeleton';
@@ -1425,53 +1422,43 @@ export const getItemsPerRow = (cq: ReturnType<typeof useContainerQuery>) => {
 interface AlbumGridItemProps {
     album: Album;
     controls: ItemControls;
+    // Fades an external album so it reads as not in the library (default).
+    dimExternal?: boolean;
     enableExpansion?: boolean;
     releaseType: string;
     rows: DataRow[] | undefined;
 }
 
-const AlbumGridItem = memo(function AlbumGridItem({
+export const AlbumGridItem = memo(function AlbumGridItem({
     album,
     controls,
+    dimExternal = true,
     enableExpansion,
     releaseType,
     rows,
 }: AlbumGridItemProps) {
     const { t } = useTranslation();
     const isExternal = isExternalAlbum(album);
-    const downloadProgress = useDownloadStore((state) => state.downloads[album.id]?.progress);
-    // A failed download stays in the store as history, but the card goes back to idle.
-    const isDownloading =
-        downloadProgress !== undefined &&
-        downloadProgress.stage !== 'error' &&
-        downloadProgress.stage !== 'done';
+    const { downloadProgress, handleDownload, isDownloading } = useExternalAlbumDownload(album);
 
-    const handleDownload = () =>
-        openModal({
-            children: (
-                <DownloadTagsModal
-                    album={album.name}
-                    artist={album.albumArtistName}
-                    onSubmit={(genres) =>
-                        startAlbumDownload(
-                            {
-                                album: album.name,
-                                artist: album.albumArtistName,
-                                genres,
-                                id: album.id,
-                                year: album.releaseYear,
-                            },
-                            album.albumArtists[0]?.id,
-                        )
-                    }
-                />
-            ),
-            title: t('download.action'),
-        });
+    const setGlobalExpanded = useSetGlobalExpanded();
 
-    const cardWrapperClassName = isExternal
-        ? `${styles.albumGridItemContent} ${styles.albumGridItemUnavailable}`
-        : styles.albumGridItemContent;
+    // Listens on the whole item: the hover download overlay covers the picture, so a click
+    // there never reaches the card itself.
+    const handleShowTracks = (event: React.MouseEvent<HTMLDivElement>) => {
+        if (!isExternal || (event.target as HTMLElement).closest('a[href], button')) return;
+        const { globalExpanded } = useAppStore.getState();
+        setGlobalExpanded(
+            globalExpanded?.item?.id === album.id
+                ? null
+                : { item: album as unknown as ItemListStateItem, itemType: LibraryItem.ALBUM },
+        );
+    };
+
+    const cardWrapperClassName =
+        isExternal && dimExternal
+            ? `${styles.albumGridItemContent} ${styles.albumGridItemUnavailable}`
+            : styles.albumGridItemContent;
 
     return (
         <motion.div
@@ -1479,6 +1466,8 @@ const AlbumGridItem = memo(function AlbumGridItem({
             // External cards never move between sections, and shared-layout animation on a
             // large, reflowing grid can leave a card stuck invisible, leaving a gap.
             layoutId={isExternal ? undefined : `${releaseType}-${album.id}`}
+            onClick={handleShowTracks}
+            style={isExternal ? { cursor: 'pointer' } : undefined}
         >
             <div className={cardWrapperClassName}>
                 <MemoizedItemCard

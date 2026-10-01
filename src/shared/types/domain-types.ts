@@ -300,6 +300,17 @@ export type ExternalArtistDetail = {
 
 export type ExternalAlbumTrackPlays = { plays: number; title: string };
 
+export type ExternalAlbumTrack = { number: number; title: string };
+
+export type ExternalPopularAlbum = {
+    artistName: string;
+    id: string;
+    imageUrl: null | string;
+    name: string;
+    releaseDate: null | string;
+    trackCount: number;
+};
+
 export type ExternalArtistSearchResult = {
     imageFallbackUrls?: string[];
     imageUrl: null | string;

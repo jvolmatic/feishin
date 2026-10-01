@@ -1,7 +1,7 @@
 import { Fragment, memo } from 'react';
-import { generatePath, Link } from 'react-router';
+import { Link } from 'react-router';
 
-import { AppRoute } from '/@/renderer/router/routes';
+import { getAlbumArtistPath } from '/@/renderer/utils/external-album';
 import { Text, TextProps } from '/@/shared/components/text/text';
 import { AlbumArtist, RelatedAlbumArtist, RelatedArtist } from '/@/shared/types/domain-types';
 
@@ -123,9 +123,7 @@ const JoinedArtistsComponent = ({
                                 component={Link}
                                 fw={500}
                                 isLink
-                                to={generatePath(AppRoute.LIBRARY_ALBUM_ARTISTS_DETAIL, {
-                                    albumArtistId: artist.id,
-                                })}
+                                to={getAlbumArtistPath(artist.id)}
                                 {...linkProps}
                             >
                                 {artist.name}
@@ -166,9 +164,7 @@ const JoinedArtistsComponent = ({
                             fw={500}
                             isLink
                             key={`${artist.id}-${index}`}
-                            to={generatePath(AppRoute.LIBRARY_ALBUM_ARTISTS_DETAIL, {
-                                albumArtistId: artist.id,
-                            })}
+                            to={getAlbumArtistPath(artist.id)}
                             {...linkProps}
                         >
                             {text}
@@ -192,9 +188,7 @@ const JoinedArtistsComponent = ({
                                     component={Link}
                                     fw={500}
                                     isLink
-                                    to={generatePath(AppRoute.LIBRARY_ALBUM_ARTISTS_DETAIL, {
-                                        albumArtistId: artist.id,
-                                    })}
+                                    to={getAlbumArtistPath(artist.id)}
                                     {...linkProps}
                                 >
                                     {artist.name}

@@ -1,9 +1,14 @@
 import { ipcMain } from 'electron';
 
 import { getExternalAlbumCover } from './external-album-covers';
-import { getArtistAlbums as getITunesArtistAlbums } from './providers/itunes';
+import {
+    getAlbumTracks as getITunesAlbumTracks,
+    getArtistAlbums as getITunesArtistAlbums,
+    getPopularAlbums as getITunesPopularAlbums,
+} from './providers/itunes';
 import {
     getAlbumTrackPlays as getYouTubeMusicAlbumTrackPlays,
+    getAlbumTracks as getYouTubeMusicAlbumTracks,
     getArtistAlbums as getYouTubeMusicArtistAlbums,
     getArtistDetail as getYouTubeMusicArtistDetail,
     searchArtists as searchYouTubeMusicArtists,
@@ -11,10 +16,13 @@ import {
 
 import log from '/@/main/logger';
 import {
+    Album,
+    ExternalAlbumTrack,
     ExternalAlbumTrackPlays,
     ExternalArtistAlbumResult,
     ExternalArtistDetail,
     ExternalArtistSearchResult,
+    LibraryItem,
     ServerType,
 } from '/@/shared/types/domain-types';
 import { normalizeAlbumTitle } from '/@/shared/utils/album-title';
@@ -169,6 +177,116 @@ ipcMain.handle(
         } catch (error) {
             log.warn('Failed to fetch external artist detail', error);
             return null;
+        }
+    },
+);
+
+export interface ExternalPopularAlbumsQuery {
+    serverId: string;
+    serverType: ServerType;
+}
+
+const POPULAR_ALBUMS_LIMIT = 100;
+
+const getExternalPopularAlbums = async ({
+    serverId,
+    serverType,
+}: ExternalPopularAlbumsQuery): Promise<Album[]> => {
+    const albums = await getITunesPopularAlbums(POPULAR_ALBUMS_LIMIT);
+
+    return albums.map(({ artistName, id, imageUrl, name, releaseDate, trackCount }) => {
+        const releaseYear = releaseDate ? new Date(releaseDate).getFullYear() : 0;
+
+        const artist = {
+            id: `external:${artistName}`,
+            imageId: null,
+            imageUrl: null,
+            name: artistName,
+            userFavorite: false,
+            userRating: null,
+        };
+
+        return {
+            _itemType: LibraryItem.ALBUM,
+            _serverId: serverId,
+            _serverType: serverType,
+            albumArtistName: artistName,
+            albumArtists: [artist],
+            artists: [artist],
+            blurHash: null,
+            comment: null,
+            createdAt: '',
+            discs: null,
+            dominantColor: null,
+            duration: null,
+            explicitStatus: null,
+            gain: null,
+            genres: [],
+            id,
+            imageId: null,
+            imageUrl,
+            isCompilation: false,
+            lastPlayedAt: null,
+            mbzId: null,
+            mbzReleaseGroupId: null,
+            missing: true,
+            name,
+            originalDate: releaseDate,
+            originalYear: releaseYear,
+            participants: null,
+            peak: null,
+            playCount: null,
+            ratedAt: null,
+            recordLabels: [],
+            releaseDate,
+            releaseType: 'album',
+            releaseTypes: ['album'],
+            releaseYear,
+            size: null,
+            songCount: trackCount,
+            sortName: name,
+            starredAt: null,
+            tags: null,
+            thumbHash: null,
+            trackYearRange: null,
+            updatedAt: '',
+            userFavorite: false,
+            userRating: null,
+            version: null,
+        } satisfies Album;
+    });
+};
+
+ipcMain.handle(
+    'external-popular-albums',
+    async (_event, query: ExternalPopularAlbumsQuery): Promise<Album[]> => {
+        try {
+            return await getExternalPopularAlbums(query);
+        } catch (error) {
+            log.warn('Failed to fetch external popular albums', error);
+            return [];
+        }
+    },
+);
+
+export interface ExternalAlbumTracksQuery {
+    albumId: string;
+    albumName: string;
+    artistName: string;
+}
+
+const ITUNES_ID_PREFIX = 'external:itunes:';
+
+ipcMain.handle(
+    'external-album-tracks',
+    async (_event, query: ExternalAlbumTracksQuery): Promise<ExternalAlbumTrack[]> => {
+        try {
+            return query.albumId.startsWith(ITUNES_ID_PREFIX)
+                ? await getITunesAlbumTracks(query.albumId.slice(ITUNES_ID_PREFIX.length))
+                : await getYouTubeMusicAlbumTracks(query.artistName, query.albumName);
+        } catch (error) {
+            log.warn('Failed to fetch external album tracks', error);
+            return [];
         }
     },
 );

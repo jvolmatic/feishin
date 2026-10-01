@@ -353,8 +353,9 @@ export const queryKeys: Record<
         list: (serverId: string) => [serverId, 'roles'] as const,
     },
     search: {
-        externalArtists: (searchTerm: string) =>
-            ['search', 'externalArtists', searchTerm] as const,
+        externalArtists: (searchTerm: string) => ['search', 'externalArtists', searchTerm] as const,
+        externalPopularAlbums: (serverId: string) =>
+            [serverId, 'search', 'externalPopularAlbums'] as const,
         infiniteList: (
             serverId: string,
             type: 'albumArtists' | 'albums' | 'songs',

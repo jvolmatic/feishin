@@ -299,7 +299,7 @@ const ItemCardStandardImageArea = memo(function ItemCardStandardImageArea({
             onDragStart={handleLinkDragStart}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
-            state={{ item: data }}
+            state={getNavigationState(data)}
             to={navigationPath}
         >
             {imageContainerContent}
@@ -455,7 +455,7 @@ const CompactItemCardImageArea = memo(function CompactItemCardImageArea({
             onDragStart={handleLinkDragStart}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
-            state={{ item: data }}
+            state={getNavigationState(data)}
             to={navigationPath}
         >
             {imageContainerContent}
@@ -1198,12 +1198,7 @@ export const getDataRows = (type?: 'compact' | 'default' | 'poster'): DataRow[] 
                 if ('artists' in data && Array.isArray(data.artists)) {
                     return (data as Album | Song).artists.map((artist, index) => (
                         <Fragment key={artist.id}>
-                            <Link
-                                state={{ item: artist }}
-                                to={generatePath(AppRoute.LIBRARY_ALBUM_ARTISTS_DETAIL, {
-                                    albumArtistId: artist.id,
-                                })}
-                            >
+                            <Link state={{ item: artist }} to={getAlbumArtistPath(artist.id)}>
                                 {artist.name}
                             </Link>
                             {index < (data as Album | Song).artists.length - 1 && <Separator />}
@@ -1419,6 +1414,15 @@ const GenreImagePlaceholder = ({ className, name }: { className?: string; name: 
     );
 };
 
+// An external album opens its artist's page, which must not inherit the album as its item
+// (that would show the album cover as the artist picture).
+const getNavigationState = (data: unknown) => {
+    const item = data as undefined | { _itemType?: LibraryItem; id?: string };
+    const isExternal =
+        item?._itemType === LibraryItem.ALBUM && isExternalAlbum({ id: item.id ?? '' });
+    return isExternal ? undefined : { item: data };
+};
+
 const getItemNavigationPath = (
     data: Album | AlbumArtist | Artist | Genre | Playlist | Song | undefined,
     itemType: LibraryItem,
@@ -1428,6 +1432,12 @@ const getItemNavigationPath = (
     }
 
     const effectiveItemType = '_itemType' in data && data._itemType ? data._itemType : itemType;
+
+    // External albums have no detail page, so open their artist instead.
+    if (effectiveItemType === LibraryItem.ALBUM && isExternalAlbum(data)) {
+        const artistId = (data as Album).albumArtists[0]?.id;
+        return artistId ? getAlbumArtistPath(artistId) : null;
+    }
 
     return getTitlePath(effectiveItemType, data.id);
 };

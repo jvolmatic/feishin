@@ -4,8 +4,10 @@ import styles from './expanded-list-item.module.css';
 
 import { ItemListStateItem } from '/@/renderer/components/item-list/helpers/item-list-state';
 import { ExpandedAlbumListItem } from '/@/renderer/features/albums/components/expanded-album-list-item';
+import { ExpandedExternalAlbumItem } from '/@/renderer/features/albums/components/expanded-external-album-item';
+import { isExternalAlbum } from '/@/renderer/utils/external-album';
 import { Spinner } from '/@/shared/components/spinner/spinner';
-import { LibraryItem } from '/@/shared/types/domain-types';
+import { Album, LibraryItem } from '/@/shared/types/domain-types';
 
 interface ExpandedListItemProps {
     item?: ItemListStateItem;
@@ -36,7 +38,11 @@ interface SelectedItemProps {
 const SelectedItem = ({ item, itemType }: SelectedItemProps) => {
     switch (itemType) {
         case LibraryItem.ALBUM:
-            return <ExpandedAlbumListItem item={item} />;
+            return isExternalAlbum(item) ? (
+                <ExpandedExternalAlbumItem album={item as unknown as Album} />
+            ) : (
+                <ExpandedAlbumListItem item={item} />
+            );
         default:
             return null;
     }

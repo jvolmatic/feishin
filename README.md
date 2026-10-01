@@ -8,7 +8,6 @@
       alt="License">
     </a>
   </p>
----
 
 A custom version of Feishin, which is originally a rewrite of [Sonixd](https://github.com/jeffvli/sonixd).
 
