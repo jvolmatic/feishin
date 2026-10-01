@@ -44,7 +44,7 @@ interface ExternalAlbumProvider {
 const albumProviders: Record<string, ExternalAlbumProvider> = {
     itunes: {
         getAlbums: getITunesArtistAlbums,
-        isAvailable: () => false,
+        isAvailable: () => true,
     },
     youtubeMusic: {
         getAlbums: getYouTubeMusicArtistAlbums,
