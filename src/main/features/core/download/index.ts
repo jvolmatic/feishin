@@ -340,11 +340,22 @@ const fetchLyrics = async (
 const resolveAlbumUrl = async (artist: string, album: string): Promise<null | string> => {
     const client = new YTMusic();
     await client.initialize();
-    const results = await client.searchAlbums(`${artist} ${album}`);
     const norm = (s: string) => s.toLocaleLowerCase();
-    const match =
-        results.find((r) => norm(r.artist.name) === norm(artist) && isSameAlbum(r.name, album)) ??
-        results.find((r) => isSameAlbum(r.name, album));
+    // Edition suffixes like "(Deluxe Edition)" or "- Deluxe Edition" hurt YT search ranking.
+    const baseAlbum = album
+        .replace(/\s*[([][^)\]]*[)\]]/g, '')
+        .replace(/\s+-\s+[^-]*(edition|version|deluxe|remaster(ed)?)[^-]*$/i, '')
+        .trim();
+    let match: Awaited<ReturnType<typeof client.searchAlbums>>[number] | undefined;
+    for (const query of new Set([baseAlbum || album, album])) {
+        const results = await client.searchAlbums(`${artist} ${query}`);
+        const same = (name: string) =>
+            isSameAlbum(name, album) || isSameAlbum(name, baseAlbum || album);
+        match =
+            results.find((r) => norm(r.artist.name) === norm(artist) && same(r.name)) ??
+            results.find((r) => same(r.name));
+        if (match) break;
+    }
     if (!match) return null;
     const full = await client.getAlbum(match.albumId);
     return full.playlistId ? `https://music.youtube.com/playlist?list=${full.playlistId}` : null;
