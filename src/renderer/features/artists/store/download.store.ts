@@ -59,7 +59,10 @@ const MIN_SCAN_WAIT_MS = 5000;
 const SCAN_POLL_MS = 2000;
 const SCAN_MAX_POLLS = 30;
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const OPEN_ARTIST_ATTEMPTS = 10;
+const OPEN_ARTIST_RETRY_MS = 3000;
+
+const sleep =(ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Asks the server to scan, waits at least 5 seconds, waits for the scan to end, then refetches
@@ -166,27 +169,33 @@ const openNewArtist = async (name: string) => {
         decodeURIComponent(window.location.hash.slice(1)) === decodeURIComponent(externalPath);
     if (!isOnExternalPage()) return;
 
-    try {
-        const { items } = await api.controller.getAlbumArtistList({
-            apiClientProps: { serverId },
-            query: {
-                limit: 10,
-                searchTerm: name,
-                sortBy: AlbumArtistListSort.NAME,
-                sortOrder: SortOrder.ASC,
-                startIndex: 0,
-            },
-        });
-        const normalize = (value: string) =>
-            value.toLocaleLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
-        const artist = items.find((item) => normalize(item.name) === normalize(name));
-        if (artist && isOnExternalPage()) {
-            window.location.hash = generatePath(AppRoute.LIBRARY_ALBUM_ARTISTS_DETAIL, {
-                albumArtistId: artist.id,
+    const normalize = (value: string) => value.toLocaleLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+
+    // The server may not have indexed the artist yet when the scan reports done, so retry.
+    for (let attempt = 0; attempt < OPEN_ARTIST_ATTEMPTS && isOnExternalPage(); attempt += 1) {
+        if (attempt > 0) await sleep(OPEN_ARTIST_RETRY_MS);
+
+        try {
+            const { items } = await api.controller.getAlbumArtistList({
+                apiClientProps: { serverId },
+                query: {
+                    limit: 10,
+                    searchTerm: name,
+                    sortBy: AlbumArtistListSort.NAME,
+                    sortOrder: SortOrder.ASC,
+                    startIndex: 0,
+                },
             });
+            const artist = items.find((item) => normalize(item.name) === normalize(name));
+            if (artist && isOnExternalPage()) {
+                window.location.hash = generatePath(AppRoute.LIBRARY_ALBUM_ARTISTS_DETAIL, {
+                    albumArtistId: artist.id,
+                });
+                return;
+            }
+        } catch (error) {
+            logger.warn('Failed to open the new artist page', { error });
         }
-    } catch (error) {
-        logger.warn('Failed to open the new artist page', { error });
     }
 };
 

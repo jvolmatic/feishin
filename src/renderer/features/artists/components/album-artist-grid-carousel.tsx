@@ -35,7 +35,6 @@ export function AlbumArtistGridCarousel(props: AlbumArtistGridCarouselProps) {
                     controls={controls}
                     data={albumArtist}
                     enableDrag={!isExternalAlbum(albumArtist)}
-                    isRound
                     itemType={LibraryItem.ALBUM_ARTIST}
                     rows={rows}
                     type="poster"
@@ -50,7 +49,6 @@ export function AlbumArtistGridCarousel(props: AlbumArtistGridCarouselProps) {
         return (
             <GridCarouselSkeletonFallback
                 placeholderItemType={LibraryItem.ALBUM_ARTIST}
-                placeholderRound
                 placeholderRows={rows}
                 rowCount={rowCount}
                 title={title}
