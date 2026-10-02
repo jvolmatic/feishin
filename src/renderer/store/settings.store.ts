@@ -602,6 +602,7 @@ export const GeneralSettingsSchema = z.object({
     theme: z.string(),
     themeDark: z.string(),
     themeLight: z.string(),
+    topSongsFromExternalPlays: z.boolean(),
     useThemeAccentColor: z.boolean(),
     useThemePrimaryShade: z.boolean(),
     volumeWheelStep: z.number(),
@@ -1442,6 +1443,7 @@ const initialState: SettingsState = {
         theme: AppTheme.DEFAULT_DARK,
         themeDark: AppTheme.DEFAULT_DARK,
         themeLight: AppTheme.DEFAULT_LIGHT,
+        topSongsFromExternalPlays: true,
         useThemeAccentColor: false,
         useThemePrimaryShade: true,
         volumeWheelStep: 5,
@@ -2954,6 +2956,12 @@ export const useSettingsStore = createWithEqualityFn<SettingsSlice>()(
                     }
                 }
 
+                if (version < 39) {
+                    if (state.general.topSongsFromExternalPlays === undefined) {
+                        state.general.topSongsFromExternalPlays = true;
+                    }
+                }
+
                 if (version < 38) {
                     if (state.general.showExternalPopularAlbums === undefined) {
                         state.general.showExternalPopularAlbums = true;
@@ -3012,7 +3020,7 @@ export const useSettingsStore = createWithEqualityFn<SettingsSlice>()(
                 return persistedState;
             },
             name: 'store_settings',
-            version: 38,
+            version: 39,
         },
     ),
 );
@@ -3216,6 +3224,9 @@ export const usePlayerbarOpenDrawer = () =>
 
 export const useShowExternalArtists = () =>
     useSettingsStore((state) => state.general.showExternalArtists, shallow);
+
+export const useTopSongsFromExternalPlays = () =>
+    useSettingsStore((state) => state.general.topSongsFromExternalPlays, shallow);
 
 export const useShowExternalPlays = () =>
     useSettingsStore((state) => state.general.showExternalPlays, shallow);

@@ -1215,6 +1215,8 @@
         "replayGainPreamp": "{{ReplayGain}} preamp (db)",
         "sampleRate_description": "Select the output sample rate to be used if the sample frequency selected is different from that of the current media. A value less than 8000 will use the default frequency",
         "sampleRate": "Sample rate",
+        "topSongsFromExternalPlays_description": "When turned on, an artist's top songs are picked from all of their songs in your library by external play counts instead of the server's list. Top songs are always ordered by external play counts",
+        "topSongsFromExternalPlays": "Get top songs from external plays",
         "showExternalPlays_description": "When turned on, album track lists show play counts from YouTube Music, ListenBrainz or Last.fm",
         "showExternalPlays": "Show external play counts",
         "showExternalPopularAlbums_description": "When turned on, the home page shows popular recent albums from iTunes",

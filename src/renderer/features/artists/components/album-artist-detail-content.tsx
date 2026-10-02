@@ -71,6 +71,7 @@ import {
     useArtistRadioCount,
     useExternalLinks,
     useSettingsStore,
+    useTopSongsFromExternalPlays,
 } from '/@/renderer/store/settings.store';
 import { isExternalAlbum } from '/@/renderer/utils/external-album';
 import { sanitize } from '/@/renderer/utils/sanitize';
@@ -109,6 +110,7 @@ import {
 } from '/@/shared/types/domain-types';
 import { ItemListKey, ListDisplayType, Play } from '/@/shared/types/types';
 import { normalizeAlbumTitle } from '/@/shared/utils/album-title';
+import { normalizeTitle } from '/@/shared/utils/track-title';
 
 interface AlbumArtistActionButtonsProps {
     artistDiscographyLink: string;
@@ -320,6 +322,8 @@ const SongTableListContainer = ({
     return <div style={{ height }}>{children}</div>;
 };
 
+const TOP_SONGS_LIMIT = 30;
+
 interface AlbumArtistMetadataTopSongsProps {
     detailQuery: ReturnType<typeof useSuspenseQuery<AlbumArtistDetailResponse>>;
     order?: number;
@@ -373,7 +377,50 @@ const AlbumArtistMetadataTopSongsContent = ({
     const topSongsQuery =
         topSongsQueryType === 'personal' ? personalTopSongsQuery : communityTopSongsQuery;
 
-    const songs = useMemo(() => topSongsQuery.data?.items || [], [topSongsQuery.data?.items]);
+    // With the setting on, the pool is all of the artist's library songs instead of the server's
+    // top songs list. Either way the list is ordered by external plays and capped.
+    const fromExternalPlays = useTopSongsFromExternalPlays() && isElectron();
+    const artistSongsQuery = useQuery({
+        ...songsQueries.list({
+            query: {
+                artistIds: [routeId],
+                limit: 500,
+                sortBy: SongListSort.PLAY_COUNT,
+                sortOrder: SortOrder.DESC,
+                startIndex: 0,
+            },
+            serverId,
+        }),
+        enabled: fromExternalPlays && canStartQuery,
+    });
+
+    const externalSongs = useMemo(() => {
+        const seen = new Set<string>();
+        return (artistSongsQuery.data?.items || []).filter((song) => {
+            const key = normalizeTitle(song.name);
+            const isArtistSong =
+                song.artists.some((artist) => artist.id === routeId) ||
+                song.albumArtists.some((artist) => artist.id === routeId);
+            if (!isArtistSong || seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+    }, [artistSongsQuery.data?.items, routeId]);
+
+    const rawSongs = useMemo(
+        () => (externalSongs.length > 0 ? externalSongs : topSongsQuery.data?.items || []),
+        [externalSongs, topSongsQuery.data?.items],
+    );
+
+    // Songs still waiting for a count stay at the end.
+    const songsWithPlays = useAlbumTrackPlays(rawSongs);
+    const songs = useMemo(
+        () =>
+            [...songsWithPlays]
+                .sort((a, b) => (b.externalPlays ?? -1) - (a.externalPlays ?? -1))
+                .slice(0, TOP_SONGS_LIMIT),
+        [songsWithPlays],
+    );
 
     const columns = useMemo(() => {
         return tableConfig?.columns || [];
@@ -382,8 +429,6 @@ const AlbumArtistMetadataTopSongsContent = ({
     const filteredSongs = useMemo(() => {
         return searchLibraryItems(songs, debouncedSearchTerm, LibraryItem.SONG);
     }, [songs, debouncedSearchTerm]);
-
-    const songsWithPlays = useAlbumTrackPlays(filteredSongs);
 
     const { handleColumnReordered } = useItemListColumnReorder({
         itemListKey: ItemListKey.SONG,
@@ -432,11 +477,18 @@ const AlbumArtistMetadataTopSongsContent = ({
         onLongPress: () => handlePlay(LONG_PRESS_PLAY_BEHAVIOR[Play.LAST]),
     });
 
-    const isChecking = communityTopSongsQuery.isLoading || personalTopSongsQuery.isLoading;
-    const isLoading = topSongsQuery.isLoading || (!topSongsQuery.data && !topSongsQuery.isError);
+    const isChecking =
+        communityTopSongsQuery.isLoading ||
+        personalTopSongsQuery.isLoading ||
+        (fromExternalPlays && artistSongsQuery.isLoading);
+    const isLoading =
+        topSongsQuery.isLoading ||
+        (!topSongsQuery.data && !topSongsQuery.isError) ||
+        (fromExternalPlays && artistSongsQuery.isLoading);
     const hasAnyTopSongs =
         (communityTopSongsQuery.data?.items?.length ?? 0) > 0 ||
-        (personalTopSongsQuery.data?.items?.length ?? 0) > 0;
+        (personalTopSongsQuery.data?.items?.length ?? 0) > 0 ||
+        externalSongs.length > 0;
 
     if (!isLoading && !tableConfig) return null;
     if (!isChecking && !hasAnyTopSongs) return null;
@@ -586,7 +638,7 @@ const AlbumArtistMetadataTopSongsContent = ({
                                         autoFitColumns={tableConfig.autoFitColumns}
                                         CellComponent={ItemTableListColumn}
                                         columns={columns}
-                                        data={songsWithPlays}
+                                        data={filteredSongs}
                                         enableAlternateRowColors={
                                             tableConfig.enableAlternateRowColors
                                         }

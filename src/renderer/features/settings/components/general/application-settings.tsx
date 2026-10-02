@@ -432,6 +432,25 @@ export const ApplicationSettings = memo(() => {
         {
             control: (
                 <Switch
+                    aria-label={t('setting.topSongsFromExternalPlays')}
+                    checked={settings.topSongsFromExternalPlays}
+                    onChange={(event) => {
+                        setSettings({
+                            general: {
+                                ...settings,
+                                topSongsFromExternalPlays: event.currentTarget.checked,
+                            },
+                        });
+                    }}
+                />
+            ),
+            description: t('setting.topSongsFromExternalPlays', { context: 'description' }),
+            isHidden: !isElectron(),
+            title: t('setting.topSongsFromExternalPlays'),
+        },
+        {
+            control: (
+                <Switch
                     aria-label={t('setting.showExternalPopularAlbums')}
                     checked={settings.showExternalPopularAlbums}
                     onChange={(event) => {
