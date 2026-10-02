@@ -25,6 +25,7 @@ import { ItemTableList } from '/@/renderer/components/item-list/item-table-list/
 import { ItemTableListColumn } from '/@/renderer/components/item-list/item-table-list/item-table-list-column';
 import { ItemControls } from '/@/renderer/components/item-list/types';
 import { albumQueries } from '/@/renderer/features/albums/api/album-api';
+import { useAlbumTrackPlays } from '/@/renderer/features/albums/hooks/use-album-track-plays';
 import { artistsQueries } from '/@/renderer/features/artists/api/artists-api';
 import { AlbumArtistGridCarousel } from '/@/renderer/features/artists/components/album-artist-grid-carousel';
 import {
@@ -382,6 +383,8 @@ const AlbumArtistMetadataTopSongsContent = ({
         return searchLibraryItems(songs, debouncedSearchTerm, LibraryItem.SONG);
     }, [songs, debouncedSearchTerm]);
 
+    const songsWithPlays = useAlbumTrackPlays(filteredSongs);
+
     const { handleColumnReordered } = useItemListColumnReorder({
         itemListKey: ItemListKey.SONG,
     });
@@ -583,7 +586,7 @@ const AlbumArtistMetadataTopSongsContent = ({
                                         autoFitColumns={tableConfig.autoFitColumns}
                                         CellComponent={ItemTableListColumn}
                                         columns={columns}
-                                        data={filteredSongs}
+                                        data={songsWithPlays}
                                         enableAlternateRowColors={
                                             tableConfig.enableAlternateRowColors
                                         }
@@ -728,6 +731,8 @@ const AlbumArtistMetadataFavoriteSongs = ({
             sortOrder,
         );
     }, [songs, debouncedSearchTerm, sortBy, sortOrder]);
+
+    const songsWithPlays = useAlbumTrackPlays(filteredSongs);
 
     const { handleColumnReordered } = useItemListColumnReorder({
         itemListKey: ItemListKey.SONG,
@@ -956,7 +961,7 @@ const AlbumArtistMetadataFavoriteSongs = ({
                                         autoFitColumns={tableConfig.autoFitColumns}
                                         CellComponent={ItemTableListColumn}
                                         columns={columns}
-                                        data={filteredSongs}
+                                        data={songsWithPlays}
                                         enableAlternateRowColors={
                                             tableConfig.enableAlternateRowColors
                                         }

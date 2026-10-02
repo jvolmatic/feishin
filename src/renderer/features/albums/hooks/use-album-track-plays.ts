@@ -48,17 +48,35 @@ const fetchListenBrainzPlays = async (mbids: string[]): Promise<Record<string, n
 export const useAlbumTrackPlays = (songs: Song[]): SongWithExternalPlays[] => {
     const enabled = useShowExternalPlays();
     const apiKey = useLastfmApiKey();
-    const { album, albumArtistName } = enabled ? (songs[0] ?? {}) : {};
 
-    const youtube = useQuery(
-        searchQueries.externalAlbumTrackPlays(albumArtistName ?? '', album ?? ''),
+    const albums = enabled
+        ? [...new Map(songs.map((song) => [`${song.albumArtistName}|${song.album}`, song]))]
+        : [];
+    const youtube = useQueries({
+        queries: albums.map(([, song]) =>
+            searchQueries.externalAlbumTrackPlays(song.albumArtistName ?? '', song.album ?? ''),
+        ),
+    });
+    const youtubeDone = youtube.every(
+        (query) => !(query.isPending && query.fetchStatus !== 'idle'),
     );
-    const youtubeDone = !(youtube.isPending && youtube.fetchStatus !== 'idle');
+    const youtubeKey = youtube.map((query) => query.dataUpdatedAt).join();
 
     const youtubePlays = useMemo(
-        () => new Map(youtube.data?.map((item) => [normalizeTitle(item.title), item.plays])),
-        [youtube.data],
+        () =>
+            new Map(
+                youtube.flatMap((query, index) =>
+                    (query.data ?? []).map((item) => [
+                        `${albums[index][0]}|${normalizeTitle(item.title)}`,
+                        item.plays,
+                    ]),
+                ) as Array<[string, number]>,
+            ),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [youtubeKey],
     );
+    const getYoutubePlays = (song: Song) =>
+        youtubePlays.get(`${song.albumArtistName}|${song.album}|${normalizeTitle(song.name)}`);
 
     const mbids = songs.flatMap((song) =>
         enabled && song.mbzRecordingId ? [song.mbzRecordingId] : [],
@@ -80,7 +98,7 @@ export const useAlbumTrackPlays = (songs: Song[]): SongWithExternalPlays[] => {
                 listenBrainzDone &&
                 enabled &&
                 Boolean(apiKey) &&
-                !youtubePlays.has(normalizeTitle(song.name)) &&
+                getYoutubePlays(song) === undefined &&
                 getListenBrainzPlays(song) === undefined,
             queryFn: () => fetchLastfmPlays(apiKey, song),
             queryKey: ['lastfm', 'trackPlays', song.albumArtistName, song.name],
@@ -94,7 +112,7 @@ export const useAlbumTrackPlays = (songs: Song[]): SongWithExternalPlays[] => {
         () =>
             songs.map((song, index) => {
                 if (!enabled) return song;
-                const fromYoutube = youtubePlays.get(normalizeTitle(song.name));
+                const fromYoutube = getYoutubePlays(song);
                 if (fromYoutube !== undefined) return { ...song, externalPlays: fromYoutube };
                 if (!youtubeDone) return { ...song, externalPlays: undefined };
                 const fromListenBrainz = getListenBrainzPlays(song);
