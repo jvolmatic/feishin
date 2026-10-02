@@ -31,6 +31,7 @@ import { AppRoute } from '/@/renderer/router/routes';
 import { useArtistBackground, useCurrentServer } from '/@/renderer/store';
 import { useExternalLinks } from '/@/renderer/store/settings.store';
 import { sanitize } from '/@/renderer/utils/sanitize';
+import { useExternalAlbumFilter } from '/@/renderer/utils/external-album';
 import { Grid } from '/@/shared/components/grid/grid';
 import { Spoiler } from '/@/shared/components/spoiler/spoiler';
 import { Stack } from '/@/shared/components/stack/stack';
@@ -81,10 +82,13 @@ const ExternalArtistDetailRoute = () => {
         }),
     );
 
+    const externalAlbumFilter = useExternalAlbumFilter();
+
     // Same ranking as the regular artist page: popularity first, then newest.
     const rankedAlbums = useMemo(
         () =>
-            [...(albumsQuery.data || [])]
+            (albumsQuery.data || [])
+                .filter(({ album }) => externalAlbumFilter(album))
                 .sort((a, b) => {
                     if (a.popularity !== b.popularity) {
                         if (a.popularity === null) return 1;
@@ -97,7 +101,7 @@ const ExternalArtistDetailRoute = () => {
                     return yearB - yearA;
                 })
                 .map(({ album }) => album),
-        [albumsQuery.data],
+        [albumsQuery.data, externalAlbumFilter],
     );
 
     return (

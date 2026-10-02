@@ -13,7 +13,7 @@ import {
     LibraryItem,
     ServerType,
 } from '/@/shared/types/domain-types';
-import { isNonAlbumTitle, isSameAlbum, isSingleOrEpTitle } from '/@/shared/utils/album-title';
+import { isSameAlbum } from '/@/shared/utils/album-title';
 import { cleanTitle, isUnwantedTrackTitle } from '/@/shared/utils/track-title';
 
 interface ArtistAlbumsQuery {
@@ -269,7 +269,7 @@ export const getArtistAlbums = async ({
             return false;
         }
 
-        return !isSingleOrEpTitle(listedAlbum.name) && !isNonAlbumTitle(listedAlbum.name);
+        return true;
     });
 
     // getArtistAlbums() reports the wrong albumId for every entry (it's the artist's own
@@ -299,7 +299,7 @@ export const getArtistAlbums = async ({
             const full = await client.getAlbum(match.albumId);
             // Count only tracks the download keeps (skits, live versions etc. are skipped).
             const songCount = full.songs.filter((song) => !isUnwantedTrackTitle(song.name)).length;
-            if (songCount <= 1) return;
+            if (songCount < 1) return;
 
             resolvedAlbums.push({ listedAlbum, songCount });
         } catch (error) {

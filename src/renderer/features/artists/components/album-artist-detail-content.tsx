@@ -71,9 +71,14 @@ import {
     useArtistRadioCount,
     useExternalLinks,
     useSettingsStore,
+    useTopSongsCount,
     useTopSongsFromExternalPlays,
 } from '/@/renderer/store/settings.store';
-import { isExternalAlbum } from '/@/renderer/utils/external-album';
+import {
+    hideExternalAlbum,
+    isExternalAlbum,
+    useExternalAlbumFilter,
+} from '/@/renderer/utils/external-album';
 import { sanitize } from '/@/renderer/utils/sanitize';
 import { sortAlbumList, sortSongList } from '/@/shared/api/utils';
 import { ActionIcon, ActionIconGroup } from '/@/shared/components/action-icon/action-icon';
@@ -322,8 +327,6 @@ const SongTableListContainer = ({
     return <div style={{ height }}>{children}</div>;
 };
 
-const TOP_SONGS_LIMIT = 30;
-
 interface AlbumArtistMetadataTopSongsProps {
     detailQuery: ReturnType<typeof useSuspenseQuery<AlbumArtistDetailResponse>>;
     order?: number;
@@ -379,6 +382,7 @@ const AlbumArtistMetadataTopSongsContent = ({
 
     // With the setting on, the pool is all of the artist's library songs instead of the server's
     // top songs list. Either way the list is ordered by external plays and capped.
+    const topSongsCount = useTopSongsCount();
     const fromExternalPlays = useTopSongsFromExternalPlays() && isElectron();
     const artistSongsQuery = useQuery({
         ...songsQueries.list({
@@ -418,8 +422,8 @@ const AlbumArtistMetadataTopSongsContent = ({
         () =>
             [...songsWithPlays]
                 .sort((a, b) => (b.externalPlays ?? -1) - (a.externalPlays ?? -1))
-                .slice(0, TOP_SONGS_LIMIT),
-        [songsWithPlays],
+                .slice(0, topSongsCount),
+        [songsWithPlays, topSongsCount],
     );
 
     const columns = useMemo(() => {
@@ -1543,6 +1547,16 @@ export const AlbumGridItem = memo(function AlbumGridItem({
                     {t('entity.trackWithCount', { count: album.songCount })}
                 </div>
             ) : null}
+            {isExternal ? (
+                <ActionIcon
+                    className={styles.externalAlbumHide}
+                    icon="visibilityOff"
+                    onClick={() => hideExternalAlbum(album)}
+                    size="sm"
+                    tooltip={{ label: t('action.hideAlbum') }}
+                    variant="filled"
+                />
+            ) : null}
             {isExternal && isElectron() ? (
                 <div className={styles.externalAlbumDownload} data-downloading={isDownloading}>
                     {isDownloading ? (
@@ -1765,6 +1779,7 @@ const ArtistAlbums = ({ albumsQuery, artistName, order }: ArtistAlbumsProps) => 
     );
 
     const rows = useGridRows(LibraryItem.ALBUM, ItemListKey.ALBUM);
+    const externalAlbumFilter = useExternalAlbumFilter();
 
     const { externalAlbums, serverAlbums } = useMemo(() => {
         const albums = albumsQuery.data?.items || [];
@@ -1775,7 +1790,8 @@ const ArtistAlbums = ({ albumsQuery, artistName, order }: ArtistAlbumsProps) => 
             sortOrder,
         );
         const externalAlbums = (externalAlbumsQuery.data || []).filter(
-            ({ album }) => !knownAlbumNames.has(normalizeAlbumTitle(album.name)),
+            ({ album }) =>
+                !knownAlbumNames.has(normalizeAlbumTitle(album.name)) && externalAlbumFilter(album),
         );
         const filteredExternalAlbums = searchLibraryItems(
             externalAlbums.map(({ album }) => album),
@@ -1800,7 +1816,14 @@ const ArtistAlbums = ({ albumsQuery, artistName, order }: ArtistAlbumsProps) => 
         });
 
         return { externalAlbums: rankedExternalAlbums, serverAlbums };
-    }, [albumsQuery.data?.items, debouncedSearchTerm, externalAlbumsQuery.data, sortBy, sortOrder]);
+    }, [
+        albumsQuery.data?.items,
+        debouncedSearchTerm,
+        externalAlbumFilter,
+        externalAlbumsQuery.data,
+        sortBy,
+        sortOrder,
+    ]);
 
     const controls = useDefaultItemListControls();
 

@@ -537,6 +537,7 @@ export const GeneralSettingsSchema = z.object({
     followSystemTheme: z.boolean(),
     fullscreenAutoOpenTimeout: z.number().min(0).max(120),
     genreTarget: GenreTargetSchema,
+    hiddenExternalAlbums: z.array(z.string()),
     homeFeature: z.boolean(),
     homeFeatureStyle: z.nativeEnum(HomeFeatureStyle),
     homeItems: z.array(SortableItemSchema(HomeItemSchema)),
@@ -570,7 +571,9 @@ export const GeneralSettingsSchema = z.object({
     shareExpiration: ShareExpirationSchema,
     showExternalArtists: z.boolean(),
     showExternalPlays: z.boolean(),
+    showExternalNonAlbums: z.boolean(),
     showExternalPopularAlbums: z.boolean(),
+    showExternalSingles: z.boolean(),
     showFavorites: z.boolean(),
     showLyricsInSidebar: z.boolean(),
     showQueueInSidebar: z.boolean(),
@@ -602,6 +605,7 @@ export const GeneralSettingsSchema = z.object({
     theme: z.string(),
     themeDark: z.string(),
     themeLight: z.string(),
+    topSongsCount: z.number(),
     topSongsFromExternalPlays: z.boolean(),
     useThemeAccentColor: z.boolean(),
     useThemePrimaryShade: z.boolean(),
@@ -1367,6 +1371,7 @@ const initialState: SettingsState = {
         followSystemTheme: false,
         fullscreenAutoOpenTimeout: 0,
         genreTarget: GenreTarget.TRACK,
+        hiddenExternalAlbums: [],
         homeFeature: true,
         homeFeatureStyle: HomeFeatureStyle.SINGLE,
         homeItems,
@@ -1412,7 +1417,9 @@ const initialState: SettingsState = {
         },
         showExternalArtists: false,
         showExternalPlays: true,
+        showExternalNonAlbums: false,
         showExternalPopularAlbums: true,
+        showExternalSingles: true,
         showFavorites: true,
         showLyricsInSidebar: true,
         showQueueInSidebar: true,
@@ -1443,6 +1450,7 @@ const initialState: SettingsState = {
         theme: AppTheme.DEFAULT_DARK,
         themeDark: AppTheme.DEFAULT_DARK,
         themeLight: AppTheme.DEFAULT_LIGHT,
+        topSongsCount: 30,
         topSongsFromExternalPlays: true,
         useThemeAccentColor: false,
         useThemePrimaryShade: true,
@@ -2956,6 +2964,13 @@ export const useSettingsStore = createWithEqualityFn<SettingsSlice>()(
                     }
                 }
 
+                if (version < 40) {
+                    state.general.hiddenExternalAlbums ??= [];
+                    state.general.topSongsCount ??= 30;
+                    state.general.showExternalSingles ??= true;
+                    state.general.showExternalNonAlbums ??= false;
+                }
+
                 if (version < 39) {
                     if (state.general.topSongsFromExternalPlays === undefined) {
                         state.general.topSongsFromExternalPlays = true;
@@ -3020,7 +3035,7 @@ export const useSettingsStore = createWithEqualityFn<SettingsSlice>()(
                 return persistedState;
             },
             name: 'store_settings',
-            version: 39,
+            version: 40,
         },
     ),
 );
@@ -3225,11 +3240,24 @@ export const usePlayerbarOpenDrawer = () =>
 export const useShowExternalArtists = () =>
     useSettingsStore((state) => state.general.showExternalArtists, shallow);
 
+export const useTopSongsCount = () =>
+    useSettingsStore((state) => state.general.topSongsCount, shallow);
+
 export const useTopSongsFromExternalPlays = () =>
     useSettingsStore((state) => state.general.topSongsFromExternalPlays, shallow);
 
 export const useShowExternalPlays = () =>
     useSettingsStore((state) => state.general.showExternalPlays, shallow);
+
+export const useExternalAlbumFilterSettings = () =>
+    useSettingsStore(
+        (state) => ({
+            hidden: state.general.hiddenExternalAlbums,
+            showNonAlbums: state.general.showExternalNonAlbums,
+            showSingles: state.general.showExternalSingles,
+        }),
+        shallow,
+    );
 
 export const useShowExternalPopularAlbums = () =>
     useSettingsStore((state) => state.general.showExternalPopularAlbums, shallow);

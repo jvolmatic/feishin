@@ -27,6 +27,7 @@ import {
     useSettingsStoreActions,
 } from '/@/renderer/store/settings.store';
 import { type Font, FONT_OPTIONS } from '/@/renderer/types/fonts';
+import { Button } from '/@/shared/components/button/button';
 import { FileInput } from '/@/shared/components/file-input/file-input';
 import { NumberInput } from '/@/shared/components/number-input/number-input';
 import { SegmentedControl } from '/@/shared/components/segmented-control/segmented-control';
@@ -431,6 +432,30 @@ export const ApplicationSettings = memo(() => {
         },
         {
             control: (
+                <NumberInput
+                    defaultValue={settings.topSongsCount}
+                    max={500}
+                    min={1}
+                    onBlur={(e) => {
+                        const value = Number(e.currentTarget.value);
+                        setSettings({
+                            general: {
+                                ...settings,
+                                topSongsCount: value
+                                    ? Math.min(Math.max(value, 1), 500)
+                                    : settings.topSongsCount,
+                            },
+                        });
+                    }}
+                    width={75}
+                />
+            ),
+            description: t('setting.topSongsCount', { context: 'description' }),
+            isHidden: false,
+            title: t('setting.topSongsCount'),
+        },
+        {
+            control: (
                 <Switch
                     aria-label={t('setting.topSongsFromExternalPlays')}
                     checked={settings.topSongsFromExternalPlays}
@@ -447,6 +472,65 @@ export const ApplicationSettings = memo(() => {
             description: t('setting.topSongsFromExternalPlays', { context: 'description' }),
             isHidden: !isElectron(),
             title: t('setting.topSongsFromExternalPlays'),
+        },
+        {
+            control: (
+                <Switch
+                    aria-label={t('setting.showExternalSingles')}
+                    checked={settings.showExternalSingles}
+                    onChange={(event) => {
+                        setSettings({
+                            general: {
+                                ...settings,
+                                showExternalSingles: event.currentTarget.checked,
+                            },
+                        });
+                    }}
+                />
+            ),
+            description: t('setting.showExternalSingles', { context: 'description' }),
+            isHidden: !isElectron(),
+            title: t('setting.showExternalSingles'),
+        },
+        {
+            control: (
+                <Switch
+                    aria-label={t('setting.showExternalNonAlbums')}
+                    checked={settings.showExternalNonAlbums}
+                    onChange={(event) => {
+                        setSettings({
+                            general: {
+                                ...settings,
+                                showExternalNonAlbums: event.currentTarget.checked,
+                            },
+                        });
+                    }}
+                />
+            ),
+            description: t('setting.showExternalNonAlbums', { context: 'description' }),
+            isHidden: !isElectron(),
+            title: t('setting.showExternalNonAlbums'),
+        },
+        {
+            control: (
+                <Button
+                    disabled={settings.hiddenExternalAlbums.length === 0}
+                    onClick={() => {
+                        setSettings({ general: { ...settings, hiddenExternalAlbums: [] } });
+                    }}
+                    size="compact-md"
+                    variant="filled"
+                >
+                    {t('common.reset')}
+                </Button>
+            ),
+            description: t('setting.resetHiddenExternalAlbums', {
+                count: settings.hiddenExternalAlbums.length,
+            }),
+            isHidden: !isElectron(),
+            title: t('setting.resetHiddenExternalAlbums', {
+                count: settings.hiddenExternalAlbums.length,
+            }),
         },
         {
             control: (

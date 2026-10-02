@@ -90,6 +90,19 @@
     opacity: 1;
 }
 
+.external-album-hide {
+    position: absolute;
+    top: var(--theme-spacing-md);
+    left: var(--theme-spacing-md);
+    z-index: 4;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.album-grid-item:hover .external-album-hide {
+    opacity: 1;
+}
+
 /* Hover is CSS-driven: React misses mouseenter when a modal closes under a still pointer. */
 .external-album-download {
     position: absolute;

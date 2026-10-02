@@ -63,9 +63,7 @@ const getExternalArtistAlbums = async (
         providers.map((provider) => provider.getAlbums(query)),
     );
 
-    const albums = results
-        .flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
-        .filter((result) => (result.album.songCount ?? 0) > 1);
+    const albums = results.flatMap((result) => (result.status === 'fulfilled' ? result.value : []));
 
     // Merge same album reported by multiple providers into one entry: prefer the
     // result with the highest popularity (falling back to provider order), and pool

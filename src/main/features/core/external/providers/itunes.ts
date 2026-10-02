@@ -7,12 +7,7 @@ import {
     LibraryItem,
     ServerType,
 } from '/@/shared/types/domain-types';
-import {
-    isNonAlbumTitle,
-    isSameAlbum,
-    isSingleOrEpTitle,
-    normalizeAlbumTitle,
-} from '/@/shared/utils/album-title';
+import { isSameAlbum, isSingleOrEpTitle, normalizeAlbumTitle } from '/@/shared/utils/album-title';
 
 interface ArtistAlbumsQuery {
     artistId: string;
@@ -96,10 +91,7 @@ export const getArtistAlbums = async ({
         (collection) =>
             collection.wrapperType === 'collection' &&
             collection.collectionType === 'Album' &&
-            collection.artistId === artist.artistId &&
-            (collection.trackCount || 0) > 1 &&
-            !isSingleOrEpTitle(collection.collectionName) &&
-            !isNonAlbumTitle(collection.collectionName),
+            collection.artistId === artist.artistId,
     );
 
     // Multiple editions (deluxe, remastered, anniversary...) of the same album: keep
