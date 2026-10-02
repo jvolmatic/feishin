@@ -14,7 +14,7 @@ import {
     ServerType,
 } from '/@/shared/types/domain-types';
 import { isNonAlbumTitle, isSameAlbum, isSingleOrEpTitle } from '/@/shared/utils/album-title';
-import { isUnwantedTrackTitle } from '/@/shared/utils/track-title';
+import { cleanTitle, isUnwantedTrackTitle } from '/@/shared/utils/track-title';
 
 interface ArtistAlbumsQuery {
     artistId: string;
@@ -186,7 +186,7 @@ export const getAlbumTrackPlays = async (
     const client = new YTMusic();
     await client.initialize();
 
-    const match = (await client.searchAlbums(`${artistName} ${albumName}`)).find(
+    const match = (await client.searchAlbums(`${artistName} ${cleanTitle(albumName)}`)).find(
         (result) =>
             normalizeName(result.artist.name) === normalizeName(artistName) &&
             isSameAlbum(result.name, albumName),
@@ -384,7 +384,7 @@ export const getAlbumTracks = async (
     const client = new YTMusic();
     await client.initialize();
 
-    const match = (await client.searchAlbums(`${artistName} ${albumName}`)).find(
+    const match = (await client.searchAlbums(`${artistName} ${cleanTitle(albumName)}`)).find(
         (result) =>
             normalizeName(result.artist.name) === normalizeName(artistName) &&
             isSameAlbum(result.name, albumName),

@@ -21,9 +21,15 @@ export const isUnwantedTrackTitle = (title: string) => {
     return UNWANTED_TRACK_KEYWORDS.some((keyword) => lower.includes(keyword));
 };
 
-/** Lowercased title without diacritics or punctuation, for comparing titles across sources. */
+const REMASTER_SUFFIX =
+    /\s*[([][^)\]]*remaster(?:ed)?[^)\]]*[)\]]|\s+-\s+[^-]*remaster(?:ed)?[^-]*$/gi;
+
+/** Strips provider noise from a title, e.g. "(2005 Remaster)", "[The Remaster]", "- Remastered 2011". */
+export const cleanTitle = (title: string) => title.replace(REMASTER_SUFFIX, '').trim();
+
+/** Lowercased title without diacritics, punctuation or remaster suffixes, for comparing titles across sources. */
 export const normalizeTitle = (title: string) =>
-    title
+    cleanTitle(title)
         .normalize('NFKD')
         .replace(/\p{Diacritic}/gu, '')
         .replace(/[^\p{L}\p{N}]/gu, '')

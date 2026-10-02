@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { searchQueries } from '/@/renderer/features/search/api/search-api';
 import { useLastfmApiKey, useShowExternalPlays } from '/@/renderer/store/settings.store';
 import { Song } from '/@/shared/types/domain-types';
-import { normalizeTitle } from '/@/shared/utils/track-title';
+import { cleanTitle, normalizeTitle } from '/@/shared/utils/track-title';
 
 export type SongWithExternalPlays = Song & { externalPlays?: null | number };
 
@@ -16,7 +16,7 @@ const fetchLastfmPlays = async (apiKey: string, song: Song): Promise<null | numb
             autocorrect: '1',
             format: 'json',
             method: 'track.getinfo',
-            track: song.name,
+            track: cleanTitle(song.name),
         })}`,
     );
     if (!response.ok) return null;
